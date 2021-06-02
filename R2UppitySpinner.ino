@@ -120,6 +120,8 @@ bool sUpLimitsCalibrated;
 bool sDownLimitsCalibrated;
 bool sSafetyManeuver;
 bool sCalibrating;
+uint8_t sI2CAddress = I2C_ADDRESS;
+uint32_t sBaudRate = SERIAL_BAUD_RATE;
 unsigned sRotaryCircleEncoderCount;
 
 static bool sNextCommand;
@@ -853,7 +855,6 @@ public:
         {
             Serial.println(F("Read saved calibration"));
         }
-        Serial.println(F("Ready"));
     }
 
     ///////////////////////////////////
@@ -1659,6 +1660,8 @@ public:
             uint32_t siz_offs = offs;
             uint16_t minpower = 0;
             uint16_t height = 0;
+            uint32_t baudrate = 0;
+            uint8_t i2caddr = 0;
             bool upcal = false;
             bool downcal = false;
             EEPROM.get(offs, siz); offs += sizeof(siz);
@@ -1666,6 +1669,8 @@ public:
             EEPROM.get(offs, height); offs += sizeof(height);
             EEPROM.get(offs, upcal); offs += sizeof(upcal);
             EEPROM.get(offs, downcal); offs += sizeof(downcal);
+            EEPROM.get(offs, baudrate); offs += sizeof(baudrate);
+            EEPROM.get(offs, i2caddr); offs += sizeof(i2caddr);
             memset(sUpLimits, '\0', sizeof(sUpLimits));
             if (upcal)
             {
@@ -1698,6 +1703,12 @@ public:
             sLifterDistance = height;
             sUpLimitsCalibrated = upcal;
             sDownLimitsCalibrated = downcal;
+            sI2CAddress = i2caddr;
+            if (sBaudRate != baudrate)
+            {
+                sBaudRate = baudrate;
+                Serial.begin(sBaudRate);
+            }
             return true;
         }
         return false;
@@ -1715,6 +1726,8 @@ public:
         EEPROM.put(offs, sLifterDistance); offs += sizeof(sLifterDistance);
         EEPROM.put(offs, sUpLimitsCalibrated); offs += sizeof(sUpLimitsCalibrated);
         EEPROM.put(offs, sDownLimitsCalibrated); offs += sizeof(sDownLimitsCalibrated);
+        EEPROM.put(offs, sBaudRate); offs += sizeof(sBaudRate);
+        EEPROM.put(offs, sI2CAddress); offs += sizeof(sI2CAddress);
         if (sUpLimitsCalibrated)
         {
             for (size_t i = sMinimumPower/5; i < sizeof(sUpLimits)/sizeof(sUpLimits[0]); i++)
@@ -2187,10 +2200,10 @@ void setup()
 
 #ifdef I2C_ADDRESS
     Wire.onReceive(i2cEvent);
-    Wire.begin(I2C_ADDRESS);
+    Wire.begin(sI2CAddress);
 #endif
 
-    DEBUG_PRINTLN(F("READY"));
+    Serial.println(F("READY"));
 }
 
 int atoi(const char* cmd, int numdigits)
@@ -2494,6 +2507,26 @@ void processConfigureCommand(const char* cmd)
             Serial.println(seq);
             if (lifter.deleteCommandFromEEPROM(seq))
                 Serial.println(F("Deleted"));
+        }
+    }
+    else if (startswith(cmd, "#PBAUD"))
+    {
+        uint32_t baudrate = strtolu(cmd, &cmd);
+        if (baudrate > 1200 && sBaudRate != baudrate)
+        {
+            sBaudRate = baudrate;
+            Serial.print(F("Next reboot new baud rate: ")); Serial.println(sBaudRate);
+            lifter.writeSettingsToEEPROM();
+        }
+    }
+    else if (startswith(cmd, "#PI2C"))
+    {
+        uint32_t addr = strtolu(cmd, &cmd);
+        if (addr && sI2CAddress != addr)
+        {
+            sI2CAddress = addr;
+            Serial.print(F("Next reboot new i2c address: ")); Serial.println(sI2CAddress);
+            lifter.writeSettingsToEEPROM();
         }
     }
     else if (startswith(cmd, "#PS"))

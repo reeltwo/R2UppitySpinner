@@ -45,6 +45,18 @@ Store specified sequence (seq) as number in EEPROM.
     #PS7:P100:L5:R-30        (search light clockwise)
     #PS0:H:L0:P100,5:W2:P50:W2:P85,35:A90,25:W2:A270,20,100:W2:P100,100:L5:R50:W4:H
 
+`#PBAUD`[baudrate]
+Change system baudrate. Settings will be stored in EEPROM and take affect once the board is reset.
+*Examples*:
+
+	#PBAUD9600               (set baud rate to 9600)
+
+`#PI2C`[address]
+Change system I2C address. Settings will be stored in EEPROM and take affect once the board is reset.
+*Examples*:
+
+	#PI2C128                 (set I2C address to 128)
+
 Lifter commands
 ===============
 
