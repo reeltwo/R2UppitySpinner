@@ -2521,7 +2521,7 @@ void processConfigureCommand(const char* cmd)
     }
     else if (startswith(cmd, "#PI2C"))
     {
-        uint32_t addr = strtolu(cmd, &cmd);
+        uint8_t addr = strtolu(cmd, &cmd);
         if (addr && sI2CAddress != addr)
         {
             sI2CAddress = addr;

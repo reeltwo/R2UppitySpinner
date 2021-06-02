@@ -2,6 +2,8 @@
 
 This is the sketch for the R2 Uppity Spinner. It depends on the Reeltwo library. You can download the latest release of the Reeltwo library here: https://github.com/reeltwo/Reeltwo/releases
 
+Default baud rate is a measely 2400 baud and the default I2C address is 32 (0x20). Both can be changed using the configuration commands below.
+
 After installing your board you should run the `#PSC` calibration command.
 
 If you want a snappy hyper caffinated periscope you should use a 6V lifter motor. If you want a slower more deliberate periscope you should use a 12V lifter motor.
