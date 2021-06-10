@@ -1,15 +1,14 @@
 //#define USE_DEBUG
 #include "ReelTwo.h"
 #include "core/SetupEvent.h"
+#include "core/Enthropy.h"
 
 ///////////////////////////////////
 // CONFIGURABLE OPTIONS
 ///////////////////////////////////
 
-#ifndef USE_DEBUG
 // If debug is enabled the serial baud rate will be 57600
 #define SERIAL_BAUD_RATE                    2400
-#endif
 #define I2C_ADDRESS                         0x20
 #define CONSOLE_BUFFER_SIZE                 300
 #define COMMAND_BUFFER_SIZE                 256
@@ -22,18 +21,22 @@
 // RISKIER CONFIGURATION OPTIONS
 ///////////////////////////////////
 
-#define LIFTER_MINIMUM_POWER    10      // 40 out of 100. Don't bother with lower values. Won't lift reliably
-#define ROTARY_MINIMUM_POWER    20      // 20 out of 100. Don't bother with lower values. Won't rotate reliably
-#define LIFTER_DISTANCE         845     // default value - lifter will calibrate
-#define ROTARY_MINIMUM_HEIGHT   LIFTER_DISTANCE/2
-#define MOTOR_TIMEOUT           2000
-#define OUTPUT_LIMIT_PRESCALE   3.1
-#define DISTANCE_OUTPUT_SCALE   3
-#define MAX_COMMANDS            100
+#define LIFTER_MINIMUM_POWER        45      // 40 out of 100. Don't bother with lower values. Won't lift reliably
+#define LIFTER_SEEKBOTTTOM_POWER    30      // 30 out of 100. Lower than LIFTER_MINIMUM_POWER because we are going down
+#define ROTARY_MINIMUM_POWER        20      // 20 out of 100. Don't bother with lower values. Won't rotate reliably
+#define LIFTER_DISTANCE             845     // default value - lifter will calibrate
+#define ROTARY_MINIMUM_HEIGHT       LIFTER_DISTANCE/2
+#define MOTOR_TIMEOUT               2000
+#define OUTPUT_LIMIT_PRESCALE       3.1
+#define DISTANCE_OUTPUT_SCALE       3
+#define MAX_COMMANDS                100
 
-#define EEPROM_MAGIC            0xba5eba11
-#define EEPROM_CMD_MAGIC        0xf005ba11
-#define EEPROM_END_TAG          0xff
+#define EEPROM_MAGIC                0xba5eba11
+#define EEPROM_CMD_MAGIC            0xf005ba11
+#define EEPROM_END_TAG              0xff
+
+// DO NOT ENABLE THIS UNLESS YOU REMOVE THE ROTARY UNIT
+//#define DISABLE_SAFETY_MANEUVER
 
 ///////////////////////////////////
 // --- Lifter mechanism
@@ -352,8 +355,7 @@ public:
                 return false;
             steering.setDistanceOutputLimits(min(distance * DISTANCE_OUTPUT_SCALE, limit));
             bool topLimit;
-            encoder_lifter_last_status = millis();
-            long last_ticks = getLifterPosition();
+            LifterStatus lifterStatus;
             for (;;)
             {
                 long encoder_ticks = getLifterPosition();
@@ -363,15 +365,10 @@ public:
                 steering.setCurrentDistance(encoder_ticks);
                 lifterMotorMove(steering.getThrottle() * speed);
 
-                if (millis() - encoder_lifter_last_status > ENCODER_STATUS_RATE)
+                if (!lifterStatus.isMoving())
                 {
-                    encoder_lifter_last_status = millis();
-                    if (last_ticks == encoder_ticks)
-                    {
-                        DEBUG_PRINTLN(F("ABORT"));
-                        break;
-                    }
-                    last_ticks = encoder_ticks;
+                    DEBUG_PRINTLN(F("ABORT"));
+                    break;
                 }
             }
             success = topLimit;
@@ -383,8 +380,7 @@ public:
                 return false;
             steering.setDistanceOutputLimits(min(distance * DISTANCE_OUTPUT_SCALE, limit));
             bool botLimit;
-            encoder_lifter_last_status = millis();
-            long last_ticks = getLifterPosition();
+            LifterStatus lifterStatus;
             for (;;)
             {
                 long encoder_ticks = getLifterPosition();
@@ -394,15 +390,10 @@ public:
                 steering.setCurrentDistance(encoder_ticks);
                 lifterMotorMove(steering.getThrottle() * speed);
 
-                if (millis() - encoder_lifter_last_status > ENCODER_STATUS_RATE)
+                if (!lifterStatus.isMoving())
                 {
-                    encoder_lifter_last_status = millis();
-                    if (last_ticks == encoder_ticks)
-                    {
-                        DEBUG_PRINTLN(F("ABORT"));
-                        break;
-                    }
-                    last_ticks = encoder_ticks;
+                    DEBUG_PRINTLN(F("ABORT"));
+                    break;
                 }
             }
             success = botLimit;
@@ -423,6 +414,7 @@ public:
     static void rotaryMotorSpeed(float speed)
     {
         fRotarySpeed = (rotaryAllowed()) ? speed : 0;
+        fRotaryEncoderLastStatus = millis();
         rotaryMotorUpdate();
     }
 
@@ -596,21 +588,14 @@ public:
         Serial.print(F(" Max: "));
         Serial.println(maxspeed);
         // degrees = -degrees;
-        uint32_t last_status = millis();
-        long last_tick = getRotaryPosition();
+        RotaryStatus rotaryStatus;
         while (!moveScopeToTarget(rotaryMotorCurrentPosition(), normalize(degrees), ROTARY_FUDGE_POSITION, speed, maxspeed, m))
         {
-            long encoder_ticks = getRotaryPosition();
             rotaryMotorMove(m);
-            if (millis() - last_status > ENCODER_STATUS_RATE)
+            if (!rotaryStatus.isMoving())
             {
-                last_status = millis();
-                if (last_tick == encoder_ticks)
-                {
-                    DEBUG_PRINTLN(F("ROTARY - ABORT"));
-                    break;
-                }
-                last_tick = encoder_ticks;
+                DEBUG_PRINTLN(F("ABORT"));
+                break;
             }
         }
         rotaryMotorStop();
@@ -621,23 +606,17 @@ public:
         long rotaryStartPos = getRotaryPosition();
         relativeDegrees = normalize(relativeDegrees);
         rotaryMotorMove((relativeDegrees > 0) ? (ROTARY_MINIMUM_POWER/100.0) : -(ROTARY_MINIMUM_POWER/100.0));
-        uint32_t last_status = millis();
-        long last_tick = rotaryStartPos;
+        RotaryStatus rotaryStatus;
         for (;;)
         {
             long encoder_ticks = getRotaryPosition();
             int diff = abs(rotaryStartPos - encoder_ticks);
             if (diff >= abs(relativeDegrees) * (sRotaryCircleEncoderCount / 360.0))
                 break;
-            if (millis() - last_status > ENCODER_STATUS_RATE)
+            if (!rotaryStatus.isMoving())
             {
-                last_status = millis();
-                if (last_tick == encoder_ticks)
-                {
-                    DEBUG_PRINTLN(F("ROTARY - ABORT"));
-                    break;
-                }
-                last_tick = encoder_ticks;
+                DEBUG_PRINTLN(F("ABORT"));
+                break;
             }
         }
         rotaryMotorStop();
@@ -658,20 +637,26 @@ public:
     static void rotateUntilHome(float speed)
     {
         bool neg = (speed < 0);
-        speed = (ROTARY_MINIMUM_POWER/100.0) + 0.1 + 0.1 * abs(speed);
+        speed = (ROTARY_MINIMUM_POWER/100.0) + 0.1 * abs(speed);
         if (neg)
             speed = -speed;
         DEBUG_PRINTLN(speed);
+        RotaryStatus rotaryStatus;
+        encoder_rotary_stop_limit = true;
         while (!rotaryHomeLimit())
         {
-            uint32_t endtime = millis() + 3L;
             rotaryMotorMove(speed);
-            while (!rotaryHomeLimit() && endtime > millis())
-                ;
+            delay(2);
             rotaryMotorStop();
             delay(1);
+            if (!rotaryStatus.isMoving())
+            {
+                DEBUG_PRINTLN(F("ABORT"));
+                break;
+            }
         }
         rotaryMotorStop();
+        encoder_rotary_stop_limit = false;
     }
 
     static void rotateLeftHome()
@@ -855,6 +840,8 @@ public:
         {
             Serial.println(F("Read saved calibration"));
         }
+        Serial.println(F("Generating random"));
+        randomSeed(Enthropy::generate());
     }
 
     ///////////////////////////////////
@@ -875,26 +862,22 @@ public:
         if (!usePID)
         {
             DEBUG_PRINTLN(F("SEEK TO BOTTOM"));
+
+            // seek down
+            float mpower = LIFTER_SEEKBOTTTOM_POWER / 100.0;
             bool botLimit;
-            encoder_lifter_last_status = millis();
-            long last_ticks = getLifterPosition();
+            LifterStatus lifterStatus;
             for (;;)
             {
-                long encoder_ticks = getLifterPosition();
                 botLimit = lifterBottomLimit();
-                if (botLimit)
+                if (botLimit || serialAbort())
                     break;
-                lifterMotorMove((sMinimumPower != 0) ? -(sMinimumPower / 100.0) : -0.3);
-                if (millis() - encoder_lifter_last_status > ENCODER_STATUS_RATE)
+                lifterMotorMove(-mpower);
+
+                if (!lifterStatus.isMoving())
                 {
-                    DEBUG_PRINTLN(encoder_ticks);
-                    encoder_lifter_last_status = millis();
-                    if (last_ticks == encoder_ticks)
-                    {
-                        DEBUG_PRINT(F("LIFTER ABORTED AT ")); DEBUG_PRINTLN(encoder_ticks);
-                        break;
-                    }
-                    last_ticks = encoder_ticks;
+                    DEBUG_PRINTLN(F("ABORT"));
+                    break;
                 }
             }
             lifterMotorStop();
@@ -927,8 +910,7 @@ public:
             uint32_t start = millis();
         #endif
             bool botLimit;
-            encoder_lifter_last_status = millis();
-            long last_ticks = getLifterPosition();
+            LifterStatus lifterStatus;
             for (;;)
             {
                 long encoder_ticks = getLifterPosition();
@@ -942,15 +924,10 @@ public:
                     break;
                 lifterMotorMove(-throttle * 0.7);
 
-                if (millis() - encoder_lifter_last_status > ENCODER_STATUS_RATE)
+                if (!lifterStatus.isMoving())
                 {
-                    encoder_lifter_last_status = millis();
-                    if (last_ticks == encoder_ticks)
-                    {
-                        DEBUG_PRINT(F("LIFTER ABORTED AT ")); DEBUG_PRINTLN(encoder_ticks);
-                        break;
-                    }
-                    last_ticks = encoder_ticks;
+                    DEBUG_PRINT(F("LIFTER ABORTED AT ")); DEBUG_PRINTLN(encoder_ticks);
+                    break;
                 }
             }
             lifterMotorStop();
@@ -975,28 +952,27 @@ public:
         // that the rotary is in home position. Then seek back down.
         // This should safely clear any state the scope was in.
         Serial.println("SAFETY");
-        if (seekToTop(0.5, false))
+        if (seekToTop(0.8, false))
         {
+        #ifndef DISABLE_SAFETY_MANEUVER
             setLightShow(kLightKit_Dagobah);
 
             int attempt = 0;
-            while (sRotaryCircleEncoderCount == 0 && attempt < 3)
+            while (sRotaryCircleEncoderCount == 0 && attempt++ < 5)
             {
                 // Ensure rotary in home position
                 rotaryMotorMove(-(ROTARY_MINIMUM_POWER/100.0));
+                delay(200);
+
+                rotateLeftHome();
                 delay(100);
 
-                rotateRightHome();
-                delay(100);
-
-                if (rotaryHomeLimit())
+                if (!rotaryHomeLimit())
                 {
-                    resetRotaryPosition();
-                    encoder_rotary_last_status = millis();
-                    long last_ticks = getRotaryPosition();
+                    Serial.println("NOT HOME TRY SPIN AROUND");
                     bool rotaryWasHome = true;
+                    RotaryStatus rotaryStatus;
                     rotaryMotorMove(-(ROTARY_MINIMUM_POWER/100.0));
-                    delay(100);
                     for (;;)
                     {
                         if (rotaryHomeLimit())
@@ -1013,28 +989,62 @@ public:
                             // DEBUG_PRINTLN("ROTARY NO LONGER HOME");
                             rotaryWasHome = false;
                         }
-                        long encoder_ticks = getRotaryPosition();
-                        if (millis() - encoder_rotary_last_status > ENCODER_STATUS_RATE)
+                        if (!rotaryStatus.isMoving())
                         {
-                            // DEBUG_PRINTLN(encoder_ticks);
-                            encoder_rotary_last_status = millis();
-                            if (last_ticks == encoder_ticks)
-                            {
-                                DEBUG_PRINT(F("ROTARY NOT MOVING ABORTED AT ")); DEBUG_PRINTLN(encoder_ticks);
-                                break;
-                            }
-                            last_ticks = encoder_ticks;
+                            break;
                         }
                     }
                     rotaryMotorStop();
+                }
+                if (rotaryHomeLimit())
+                {
+                    Serial.println("FIND ENCODER LENGTH");
+                    resetRotaryPosition();
+                    encoder_rotary_last_status = millis();
+                    bool rotaryWasHome = true;
+                    rotaryMotorMove(-(ROTARY_MINIMUM_POWER/100.0));
+                    delay(100);
+                    RotaryStatus rotaryStatus;
+                    encoder_rotary_stop_limit = true;
+                    for (;;)
+                    {
+                        if (rotaryHomeLimit())
+                        {
+                            // DEBUG_PRINTLN("ROTARY HOME");
+                            if (!rotaryWasHome)
+                            {
+                                // DEBUG_PRINTLN("ROTARY FINAL HOME");
+                                break;
+                            }
+                        }
+                        else if (rotaryWasHome)
+                        {
+                            // DEBUG_PRINTLN("ROTARY NO LONGER HOME");
+                            rotaryWasHome = false;
+                        }
+                    #ifdef USE_DEBUG
+                        long encoder_ticks = getRotaryPosition();
+                    #endif
+                        if (!rotaryStatus.isMoving())
+                        {
+                            break;
+                        }
+                    }
+                    encoder_rotary_stop_limit = false;
+                    rotaryMotorStop();
                     delay(100);
                     sRotaryCircleEncoderCount = abs(getRotaryPosition());
-                    DEBUG_PRINT(F("ROTARY ENCODER COUNT = "));
-                    DEBUG_PRINTLN(sRotaryCircleEncoderCount);
+                    Serial.print("ROTARY ENCODER COUNT = ");
+                    Serial.println(sRotaryCircleEncoderCount);
+                    if (sRotaryCircleEncoderCount < 1000)
+                    {
+                        // BAD try again
+                        sRotaryCircleEncoderCount = 0;
+                    }
                 }
                 else
                 {
-                    DEBUG_PRINT(F("ROTARY NOT HOME"));
+                    DEBUG_PRINTLN(F("ROTARY NOT HOME TRY AGAIN"));
                 }
             }
             // Scope position won't work
@@ -1050,12 +1060,12 @@ public:
                 Serial.println(rotaryMotorCurrentPosition());
                 return false;
             }
+        #endif
             // Reset sLifterDistance length
             sLifterDistance = 0;
             resetLifterPosition();
             seekToBottom(false);
             sSafetyManeuver = lifterBottomLimit();
-            Serial.println(sSafetyManeuver);
             return sSafetyManeuver;
         }
         else
@@ -1063,13 +1073,15 @@ public:
             DEBUG_PRINTLN(F("ABORT: FAILED SEEK TO TOP"));
             return false;
         }
+        return true;
     }
 
     static bool ensureSafetyManeuver()
     {
         if (!sSafetyManeuver)
         {
-            return safetyManeuver();
+            if (!safetyManeuver())
+                disableMotors();
         }
         return sSafetyManeuver;
     }
@@ -1078,6 +1090,7 @@ public:
     {
         bool success = true;
         sCalibrating = true;
+        sMinimumPower = max(sMinimumPower, LIFTER_MINIMUM_POWER);
         if (!safetyManeuver())
         {
             Serial.println(F("ABORT: FAILED SAFETY MANEUVER"));
@@ -1103,14 +1116,15 @@ public:
 
         long homePosition = getLifterPosition();
         Serial.println(F("CALIBRATE MINIMUM POWER"));
+        Serial.println(homePosition);
         int topSpeed = LIFTER_MINIMUM_POWER;
         for (topSpeed = LIFTER_MINIMUM_POWER; topSpeed <= 100; topSpeed += 5)
         {
-            long last_ticks = getLifterPosition();
+            LifterStatus lifterStatus;
             lifterMotorMove(topSpeed / 100.0);
-            delay(ENCODER_STATUS_RATE);
+            delay(ENCODER_STATUS_RATE*2);
             lifterMotorStop();
-            if (last_ticks != getLifterPosition())
+            if (lifterStatus.isMoving())
                 break;
         }
         seekToBottom(false);
@@ -1144,10 +1158,9 @@ public:
                 uint32_t start = millis();
             #endif
                 bool topLimit;
-                encoder_lifter_last_status = millis();
-                long last_ticks = getLifterPosition();
-                long start_ticks = last_ticks;
+                long start_ticks = getLifterPosition();
                 DEBUG_PRINT(F("OUTPUT LIMIT: ")); DEBUG_PRINTLN(outputLimit);
+                LifterStatus lifterStatus;
                 for (;;)
                 {
                     long encoder_ticks = getLifterPosition();
@@ -1162,15 +1175,10 @@ public:
                         throttle = steering.getThrottle();
                     lifterMotorMove(throttle * (topSpeed / 100.0));
 
-                    if (millis() - encoder_lifter_last_status > ENCODER_STATUS_RATE)
+                    if (!lifterStatus.isMoving())
                     {
-                        encoder_lifter_last_status = millis();
-                        if (last_ticks == encoder_ticks)
-                        {
-                            Serial.println(F("ABORT"));
-                            break;
-                        }
-                        last_ticks = encoder_ticks;
+                        Serial.println(F("ABORT"));
+                        break;
                     }
                 }
                 lifterMotorStop();
@@ -1184,7 +1192,7 @@ public:
             #endif
                 if (topLimit)
                 {
-                #ifdef USE_DEBUG
+                #if 0//def USE_DEBUG
                     DEBUG_PRINT(F("TOP LIMIT REACHED - "));
                     DEBUG_PRINT(topSpeed);
                     DEBUG_PRINT(F(" "));
@@ -1236,7 +1244,7 @@ public:
         // Abort calibration
         if (!success)
         {
-            Serial.println(F("CALIBRATION FAILED OR WAS ABORTED"));
+            Serial.println(F("CALIBRATION ABORTED"));
             sCalibrating = false;
             return false;
         }
@@ -1274,9 +1282,8 @@ public:
                 uint32_t start = millis();
             #endif
                 bool botLimit;
-                encoder_lifter_last_status = millis();
-                long last_ticks = getLifterPosition();
-                long start_ticks = last_ticks;
+                long start_ticks = getLifterPosition();
+                LifterStatus lifterStatus;
                 for (;;)
                 {
                     long encoder_ticks = getLifterPosition();
@@ -1287,16 +1294,10 @@ public:
                     steering.setCurrentDistance(encoder_ticks);
                     lifterMotorMove(steering.getThrottle() * (topSpeed / 100.0));
 
-                    if (millis() - encoder_lifter_last_status > ENCODER_STATUS_RATE)
+                    if (!lifterStatus.isMoving())
                     {
-                        DEBUG_PRINTLN(encoder_ticks);
-                        encoder_lifter_last_status = millis();
-                        if (last_ticks == encoder_ticks)
-                        {
-                            Serial.println(F("ABORT"));
-                            break;
-                        }
-                        last_ticks = encoder_ticks;
+                        Serial.println(F("ABORT"));
+                        break;
                     }
                 }
                 lifterMotorStop();
@@ -1311,26 +1312,26 @@ public:
             #endif
                 if (botLimit)
                 {
-                    DEBUG_PRINT(F("BOT LIMIT REACHED - "));
-                    DEBUG_PRINT(topSpeed);
-                    DEBUG_PRINT(F(" "));
-                    DEBUG_PRINTLN(outputLimit);
+                    // DEBUG_PRINT(F("BOT LIMIT REACHED - "));
+                    // DEBUG_PRINT(topSpeed);
+                    // DEBUG_PRINT(F(" "));
+                    // DEBUG_PRINTLN(outputLimit);
 
-                    long encoder_ticks = getLifterPosition();
-                    DEBUG_PRINT(F("  DISTANCE: "));
-                    DEBUG_PRINT(encoder_ticks);
-                    DEBUG_PRINT(F(" MAX DISTANCE: "));
-                    DEBUG_PRINTLN(minEncoderVal);
-                    DEBUG_PRINT(F("TIME: "));
-                    DEBUG_PRINT(stop - start);
-                    if (encoder_ticks > minEncoderVal)
-                    {
-                        DEBUG_PRINT(F(" BOUNCE: "));
-                        DEBUG_PRINT(encoder_ticks - minEncoderVal);
-                    }
-                    DEBUG_PRINTLN();
+                    // long encoder_ticks = getLifterPosition();
+                    // DEBUG_PRINT(F("  DISTANCE: "));
+                    // DEBUG_PRINT(encoder_ticks);
+                    // DEBUG_PRINT(F(" MAX DISTANCE: "));
+                    // DEBUG_PRINTLN(minEncoderVal);
+                    // DEBUG_PRINT(F("TIME: "));
+                    // DEBUG_PRINT(stop - start);
+                    // if (encoder_ticks > minEncoderVal)
+                    // {
+                    //     DEBUG_PRINT(F(" BOUNCE: "));
+                    //     DEBUG_PRINT(encoder_ticks - minEncoderVal);
+                    // }
+                    // DEBUG_PRINTLN();
                     size_t index = topSpeed/5;
-                    DEBUG_PRINT(F("index: ")); DEBUG_PRINTLN(index);
+                    // DEBUG_PRINT(F("index: ")); DEBUG_PRINTLN(index);
                     sDownLimits[index].valid = true;
                     sDownLimits[index].outputLimit = outputLimit;
                     break;
@@ -1338,13 +1339,13 @@ public:
                 else
                 {
                     long encoder_ticks = getLifterPosition();
-                    DEBUG_PRINT(encoder_ticks);
-                    DEBUG_PRINT(F(" LIMIT NOT REACHED - RETRYING "));
-                    DEBUG_PRINT(targetDistance - encoder_ticks);
+                    // DEBUG_PRINT(encoder_ticks);
+                    // DEBUG_PRINT(F(" LIMIT NOT REACHED - RETRYING "));
+                    // DEBUG_PRINT(targetDistance - encoder_ticks);
                     outputLimit -= max(targetDistance - encoder_ticks, 1);
                     if (outputLimit < 0)
                         outputLimit = 0;
-                    DEBUG_PRINT(F(" NEW LIMIT : ")); DEBUG_PRINTLN(outputLimit);
+                    // DEBUG_PRINT(F(" NEW LIMIT : ")); DEBUG_PRINTLN(outputLimit);
                 }
                 delay(2000);
                 if (serialAbort())
@@ -1360,7 +1361,8 @@ public:
         seekToBottom();
         if (!success)
         {
-            Serial.println(F("CALIBRATION FAILED OR WAS ABORTED"));
+            Serial.println(F("CALIBRATION ABORTED"));
+            sMinimumPower = max(sMinimumPower, LIFTER_MINIMUM_POWER);
             sCalibrating = false;
             return false;
         }
@@ -1390,6 +1392,7 @@ private:
             {
                 encoder_lifter_ticks--;
             }
+            encoder_lifter_changed++;
         }
         encoder_lifter_pin_A_last = encoder_lifter_val;
     }
@@ -1407,11 +1410,34 @@ private:
             {
                 encoder_rotary_ticks--;
             }
+            encoder_rotary_changed++;
+            if (encoder_rotary_stop_limit && rotaryHomeLimit())
+            {
+                encoder_rotary_stop_ticks = encoder_rotary_ticks;
+                // Stop rotary motor if limit switch was hit
+                analogWrite(PIN_M2PWM1, 0);
+                analogWrite(PIN_M2PWM2, 0);
+                digitalWrite(PIN_M2D2, HIGH);
+            }
         }
         encoder_rotary_pin_A_last = encoder_rotary_val;
     }
 
     ///////////////////////////////////
+
+    static void resetLifterChangedState()
+    {
+        cli();
+        encoder_lifter_changed = 0;
+        sei();
+    }
+
+    static void resetRotaryChangedState()
+    {
+        cli();
+        encoder_rotary_changed = 0;
+        sei();
+    }
 
     static void resetLifterPosition()
     {
@@ -1483,37 +1509,32 @@ public:
     {
         if (!usePID)
         {
-            DEBUG_PRINTLN(F("SEEK TO TOP"));
+            float mpower = sMinimumPower/100.0 + 0.05 + 0.1 * speed;
+            Serial.print(F(" MOTOR: ")); Serial.println(mpower);
+
+            // seek up
             bool topLimit;
-            encoder_lifter_last_status = millis();
-            long last_ticks = getLifterPosition();
+            LifterStatus lifterStatus;
             for (;;)
             {
-                long encoder_ticks = getLifterPosition();
                 topLimit = lifterTopLimit();
                 if (topLimit || serialAbort())
                     break;
-                lifterMotorMove(speed);
-
-                if (millis() - encoder_lifter_last_status > ENCODER_STATUS_RATE)
+                lifterMotorMove(mpower);
+                delay(3);
+                lifterMotorStop();
+                delay(1);
+                if (!lifterStatus.isMoving())
                 {
-                    encoder_lifter_last_status = millis();
-                    if (last_ticks == encoder_ticks)
-                    {
-                        DEBUG_PRINT(F("LIFTER ABORTED AT ")); DEBUG_PRINTLN(encoder_ticks);
-                        break;
-                    }
-                    last_ticks = encoder_ticks;
+                    DEBUG_PRINTLN(F("ABORT"));
+                    break;
                 }
             }
-            delay(200);
             if (topLimit)
             {
                 DEBUG_PRINTLN(F("TOP LIMIT REACHED"));
                 resetLifterPositionTop();
             }
-            lifterMotorStop();
-            delay(500);
             return topLimit;
         }
         if (!isRotaryAtRest())
@@ -1533,8 +1554,7 @@ public:
         uint32_t start = millis();
     #endif
         bool topLimit;
-        encoder_lifter_last_status = millis();
-        long last_ticks = getLifterPosition();
+        LifterStatus lifterStatus;
         for (;;)
         {
             long encoder_ticks = getLifterPosition();
@@ -1544,15 +1564,10 @@ public:
             steering.setCurrentDistance(encoder_ticks);
             lifterMotorMove(steering.getThrottle() * speed);
 
-            if (millis() - encoder_lifter_last_status > ENCODER_STATUS_RATE)
+            if (!lifterStatus.isMoving())
             {
-                encoder_lifter_last_status = millis();
-                if (last_ticks == encoder_ticks)
-                {
-                    DEBUG_PRINT(F("LIFTER ABORTED AT ")); DEBUG_PRINTLN(encoder_ticks);
-                    break;
-                }
-                last_ticks = encoder_ticks;
+                DEBUG_PRINT(F("LIFTER ABORTED AT ")); DEBUG_PRINTLN(encoder_ticks);
+                break;
             }
         }
         lifterMotorStop();
@@ -1591,8 +1606,7 @@ public:
         {
             // seek up
             bool topLimit;
-            encoder_lifter_last_status = millis();
-            long last_ticks = getLifterPosition();
+            LifterStatus lifterStatus;
             for (;;)
             {
                 long encoder_ticks = getLifterPosition();
@@ -1603,15 +1617,10 @@ public:
                 delay(3);
                 lifterMotorStop();
                 delay(1);
-                if (millis() - encoder_lifter_last_status > ENCODER_STATUS_RATE)
+                if (!lifterStatus.isMoving())
                 {
-                    encoder_lifter_last_status = millis();
-                    if (last_ticks == encoder_ticks)
-                    {
-                        DEBUG_PRINTLN(F("ABORT"));
-                        break;
-                    }
-                    last_ticks = encoder_ticks;
+                    DEBUG_PRINTLN(F("ABORT"));
+                    break;
                 }
             }
             success = topLimit;
@@ -1620,8 +1629,7 @@ public:
         {
             // seek down
             bool botLimit;
-            encoder_lifter_last_status = millis();
-            long last_ticks = getLifterPosition();
+            LifterStatus lifterStatus;
             for (;;)
             {
                 long encoder_ticks = getLifterPosition();
@@ -1629,16 +1637,14 @@ public:
                 if (botLimit || encoder_ticks == target_ticks || serialAbort())
                     break;
                 lifterMotorMove(-mpower);
+                delay(3);
+                lifterMotorStop();
+                delay(1);
 
-                if (millis() - encoder_lifter_last_status > ENCODER_STATUS_RATE)
+                if (!lifterStatus.isMoving())
                 {
-                    encoder_lifter_last_status = millis();
-                    if (last_ticks == encoder_ticks)
-                    {
-                        DEBUG_PRINTLN(F("ABORT"));
-                        break;
-                    }
-                    last_ticks = encoder_ticks;
+                    DEBUG_PRINTLN(F("ABORT"));
+                    break;
                 }
             }
             success = botLimit;
@@ -1707,7 +1713,9 @@ public:
             if (sBaudRate != baudrate)
             {
                 sBaudRate = baudrate;
+            #ifndef USE_DEBUG
                 Serial.begin(sBaudRate);
+            #endif
             }
             return true;
         }
@@ -2068,22 +2076,68 @@ public:
         return false;
     }
 
+    class RotaryStatus
+    {
+    public:
+        RotaryStatus()
+        {
+            resetRotaryChangedState();
+            encoder_rotary_last_status = millis();
+        }
+
+        bool isMoving()
+        {
+            if (millis() - encoder_rotary_last_status >= ENCODER_STATUS_RATE)
+            {
+                encoder_rotary_last_status = millis();
+                if (encoder_rotary_changed < 20)
+                    return false;
+                resetRotaryChangedState();
+            }
+            return true;
+        }
+    };
+
+    class LifterStatus
+    {
+    public:
+        LifterStatus()
+        {
+            resetLifterChangedState();
+            encoder_lifter_last_status = millis();
+        }
+
+        bool isMoving()
+        {
+            if (millis() - encoder_lifter_last_status >= ENCODER_STATUS_RATE)
+            {
+                encoder_lifter_last_status = millis();
+                if (encoder_lifter_changed < 20)
+                    return false;
+                resetLifterChangedState();
+            }
+            return !lifterMotorFault();
+        }
+    };
+
     ///////////////////////////////////
 
     static volatile long encoder_lifter_ticks;
     static long encoder_lifter_ticks_old;
     static volatile int encoder_lifter_pin_A_last;
     static volatile int encoder_lifter_val;
-    static float encoder_lifter_velocity;
+    static volatile uint16_t encoder_lifter_changed;
     static uint32_t encoder_lifter_last_status;
 
     ///////////////////////////////////
 
     static volatile long encoder_rotary_ticks;
+    static volatile long encoder_rotary_stop_ticks;
     static long encoder_rotary_ticks_old;
     static volatile int encoder_rotary_pin_A_last;
     static volatile int encoder_rotary_val;
-    static float encoder_rotary_velocity;
+    static volatile uint16_t encoder_rotary_changed;
+    static volatile bool encoder_rotary_stop_limit;
     static uint32_t encoder_rotary_last_status;
 
     static bool fMotorsEnabled;
@@ -2101,14 +2155,16 @@ volatile long PeriscopeLifter::encoder_lifter_ticks;
 long PeriscopeLifter::encoder_lifter_ticks_old;
 volatile int PeriscopeLifter::encoder_lifter_pin_A_last;
 volatile int PeriscopeLifter::encoder_lifter_val;
-float PeriscopeLifter::encoder_lifter_velocity;
+volatile uint16_t PeriscopeLifter::encoder_lifter_changed;
 uint32_t PeriscopeLifter::encoder_lifter_last_status;
 
 volatile long PeriscopeLifter::encoder_rotary_ticks;
+volatile long PeriscopeLifter::encoder_rotary_stop_ticks;
 long PeriscopeLifter::encoder_rotary_ticks_old;
 volatile int PeriscopeLifter::encoder_rotary_pin_A_last;
 volatile int PeriscopeLifter::encoder_rotary_val;
-float PeriscopeLifter::encoder_rotary_velocity;
+volatile uint16_t PeriscopeLifter::encoder_rotary_changed;
+volatile bool PeriscopeLifter::encoder_rotary_stop_limit;
 uint32_t PeriscopeLifter::encoder_rotary_last_status;
 
 bool PeriscopeLifter::fMotorsEnabled;
@@ -2308,7 +2364,21 @@ bool processLifterCommand(const char* cmd)
         case 'R':
         {
             // spin rotary speed
-            int32_t speed = strtol(cmd, &cmd);
+            int32_t speed = 0;
+            if (*cmd == 'R')
+            {
+                speed = strtolu(cmd+1, &cmd);
+                if (speed == 0)
+                    speed = 80;
+                speed = max(speed, ROTARY_MINIMUM_POWER);
+                speed = -speed + random(speed*2);
+                if (abs(speed) < ROTARY_MINIMUM_POWER)
+                    speed = (speed < 0) ? -ROTARY_MINIMUM_POWER : ROTARY_MINIMUM_POWER;
+            }
+            else
+            {
+                speed = strtol(cmd, &cmd);
+            }
             if (*cmd == '\0' && lifter.rotaryAllowed())
             {
                 speed = min(max(speed, -100), 100);
@@ -2359,7 +2429,16 @@ bool processLifterCommand(const char* cmd)
             }
             if (*cmd == ',')
             {
-                uint32_t speedpercentage = strtolu(cmd+1, &cmd);
+                uint32_t speedpercentage;
+                if (cmd[1] == 'R' && (cmd[2] == ',' || cmd[2] == '\0'))
+                {
+                    speedpercentage = speed * 100.0 + random(100 - speed * 100.0);
+                    cmd += 2;
+                }
+                else
+                {
+                    speedpercentage = strtolu(cmd+1, &cmd);
+                }
                 if (*cmd == '\0')
                 {
                     speedpercentage = max(min(max(speedpercentage, 0), 100), speed*100);
@@ -2412,15 +2491,19 @@ bool processLifterCommand(const char* cmd)
             // wait seconds
             bool rand = false;
             uint32_t seconds;
-            if (*cmd == 'R')
+            Serial.print("WAIT: "); Serial.println(cmd);
+            if ((rand = (*cmd == 'R')))
                 cmd++;
             seconds = strtolu(cmd, &cmd);
             if (rand)
             {
+                Serial.println(seconds);
                 if (seconds == 0)
                     seconds = 6;
                 seconds = random(1, seconds);
+                Serial.println(seconds);
             }
+            Serial.print("WAIT SECONDS: "); Serial.println(seconds);
             if (*cmd == '\0')
             {
                 sWaitNextSerialCommand = millis() + uint32_t(min(max(seconds, 1), 600)) * 1000L;
@@ -2435,9 +2518,10 @@ bool processLifterCommand(const char* cmd)
             {
                 do
                 {
-                    seq = random(7);
+                    seq = random(8);
                 }
-                while (seq != lifter.kLightKit_Off);
+                while (seq == lifter.kLightKit_Off);
+                Serial.print("RAND: "); Serial.println(seq);
                 cmd++;
             }
             else
@@ -2447,6 +2531,11 @@ bool processLifterCommand(const char* cmd)
             if (*cmd == '\0')
             {
                 seq = min(max(seq, 0), 7);
+                if (seq == 0 && seq != lifter.kLightKit_Off)
+                {
+                    lifter.setLightShow(lifter.kLightKit_Off);
+                    delay(10);
+                }
                 Serial.print(F("LIGHT: ")); Serial.println(seq);
                 lifter.setLightShow(seq);
             }
@@ -2489,7 +2578,8 @@ void processConfigureCommand(const char* cmd)
     if (strcmp(cmd, "#PSC") == 0)
     {
         // calibrate
-        lifter.calibrate();
+        if (!lifter.calibrate())
+            lifter.disableMotors();
     }
     else if (startswith(cmd, "#PZERO"))
     {
@@ -2569,29 +2659,71 @@ void processConfigureCommand(const char* cmd)
                     }
                     case 'A':
                     {
+                        bool randdegrees = false;
+                        bool randspeed = false;
+                        bool randmax = false;
                         uint32_t speed = 0;
                         uint32_t maxspeed = 0;
-                        int32_t degrees = strtol(cmd+1, &cmd);
+                        int32_t degrees = 0;
+                        cmd += 1;
+                        if (*cmd == 'R')
+                        {
+                            randdegrees = true;
+                            cmd++;
+                        }
+                        else
+                        {
+                            degrees = strtol(cmd, &cmd);
+                        }
+                        Serial.println(cmd);
                         // optional speed
                         if (*cmd == ',')
                         {
-                            speed = strtolu(cmd+1, &cmd);
-                            speed = max(min(max(speed, 0), 100), ROTARY_MINIMUM_POWER);
+                            if (cmd[1] == 'R')
+                            {
+                                randspeed = true;
+                                cmd += 2;
+                            }
+                            else
+                            {
+                                speed = strtolu(cmd+1, &cmd);
+                                speed = max(min(max(speed, 0), 100), ROTARY_MINIMUM_POWER);
+                            }
                         }
                         // optional maxspeed
                         if (*cmd == ',')
                         {
-                            maxspeed = strtolu(cmd+1, &cmd);
-                            maxspeed = max(min(max(maxspeed, 0), 100), speed);
+                            if (cmd[1] == 'R')
+                            {
+                                randmax = true;
+                                cmd += 2;
+                            }
+                            else
+                            {
+                                maxspeed = strtolu(cmd+1, &cmd);
+                                maxspeed = max(min(max(maxspeed, 0), 100), speed);
+                            }
                         }
-                        Serial.print(F("Rotate Absolute Degrees: ")); Serial.print(degrees);
-                        if (speed != 0)
+                        Serial.print(F("Rotate Absolute Degrees: "));
+                        if (randdegrees)
+                            Serial.print(F("Random"));
+                        else
+                            Serial.print(degrees);
+                        if (speed != 0 || randspeed)
                         {
-                            Serial.print(F(" Speed: ")); Serial.print(speed);
+                            Serial.print(F(" Speed: "));
+                            if (randspeed)
+                                Serial.print(F("Random"));
+                            else
+                                Serial.print(speed);
                         }
-                        if (maxspeed != 0)
+                        if (maxspeed != 0 || randmax)
                         {
-                            Serial.print(F(" Max Speed: ")); Serial.print(maxspeed);
+                            Serial.print(F(" Max Speed: "));
+                            if (randmax)
+                                Serial.print(F("Random"));
+                            else
+                                Serial.print(maxspeed);
                         }
                         Serial.println();
                         break;
@@ -2599,24 +2731,66 @@ void processConfigureCommand(const char* cmd)
                     case 'D':
                     {
                         // degrees
-                        int32_t degrees = strtolu(cmd+1, &cmd);
-                        Serial.print(F("Rotate Relative Degrees: ")); Serial.println(degrees);
+                        bool randdegrees = false;
+                        int32_t degrees = 0;
+                        cmd++;
+                        if (*cmd == 'R')
+                        {
+                            randdegrees = true;
+                            cmd++;
+                        }
+                        else
+                        {
+                            degrees = strtolu(cmd, &cmd);
+                        }
+                        Serial.print(F("Rotate Relative Degrees: "));
+                        if (randdegrees)
+                            Serial.println(F("Random"));
+                        else
+                            Serial.println(degrees);
                         break;
                     }
                     case 'W':
                     {
                         // seconds
-                        uint32_t seconds = strtolu(cmd+1, &cmd);
+                        bool randseconds = false;
+                        uint32_t seconds = 0;
+                        cmd++;
+                        if (*cmd == 'R')
+                        {
+                            randseconds = true;
+                            cmd++;
+                        }
+                        seconds = strtolu(cmd, &cmd);
                         seconds = min(max(seconds, 0), 600);
-                        Serial.print(F("Wait Seconds: ")); Serial.println(seconds);
+                        Serial.print(F("Wait Seconds: "));
+                        if (randseconds)
+                            Serial.println(F("Random"));
+                        else
+                            Serial.println(seconds);
                         break;
                     }
                     case 'L':
                     {
                         // light kit sequence
-                        uint32_t seq = strtolu(cmd+1, &cmd);
+                        uint32_t seq = 0;
+                        bool randseq = false;
+                        cmd++;
+                        if (*cmd == 'R')
+                        {
+                            seq = true;
+                            cmd++;
+                        }
+                        else
+                        {
+                            seq = strtolu(cmd, &cmd);
+                        }
                         seq = min(max(seq, 0), 7);
-                        Serial.print(F("Light Kit Sequence: ")); Serial.println(seq);
+                        Serial.print(F("Light Kit Sequence: "));
+                        if (randseq)
+                            Serial.println(F("Random"));
+                        else
+                            Serial.println(seq);
                         break;
                     }
                     case 'H':
@@ -2804,6 +2978,7 @@ void loop()
         DEBUG_PRINT(F(" H: ")); DEBUG_PRINT(sLastLifter/float(sLifterDistance)*100.0);
         DEBUG_PRINT(F(" D: ")); DEBUG_PRINT(lifter.rotaryMotorCurrentPosition());
         DEBUG_PRINT(F(" P: ")); DEBUG_PRINT(lifter.getRotaryPosition());
+        DEBUG_PRINT(F(" F: ")); DEBUG_PRINT(lifter.lifterMotorFault());
         DEBUG_PRINTLN();
     }
 #endif
