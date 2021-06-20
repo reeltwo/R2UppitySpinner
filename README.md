@@ -38,14 +38,14 @@ Delete numbered sequence from EEPROM
 Store specified sequence (seq) as number in EEPROM.
 *Examples*:
 
-    #PS1:H                   (periscope down)
-    #PS2:P100                (periscope up)
-    #PS3:P100:L5:R30         (search light counter-clockwise)
-    #PS4:P100,100:L1:L0:R50  (random fast)
-    #PS5:P100:L1:L0:R30      (random slow)
-    #PS6:A0                  (face forward)
-    #PS7:P100:L5:R-30        (search light clockwise)
-    #PS0:H:L0:P100,5:W2:P50:W2:P85,35:A90,25:W2:A270,20,100:W2:P100,100:L5:R50:W4:H
+	#PS1:H                        (periscope down)
+	#PS2:P100                     (periscope up)
+	#PS3:P100:L5:R30              (search light counter-clockwise)
+	#PS4:P100,100:L7:MC,80,80,2,4 (random fast)
+	#PS5:P100:L7:MC,50,40,5,5     (random slow)
+	#PS6:A0                       (face forward)
+	#PS7:P100:L5:R-30             (search light clockwise)
+	#PS0:H:L0:P100,5:W2:P50:W2:P85,35:A90,25:W2:A270,20,100:W2:P100,100:L5:R50:W4:H
 
 `#PBAUD`[baudrate]
 Change system baudrate. Settings will be stored in EEPROM and take affect once the board is reset.
@@ -179,3 +179,11 @@ Lift periscope to specified position percentage.
 	:PP0        (lower periscope fully)
 	:PP50       (raise periscope halfway)
 	:PP100,100  (raise periscope fully at maximum speed)
+
+### Movement Random Continous
+`M`,lifterspeed][,rotaryspeed][,mininterval][,maxinterval]:
+Animate periscope continously rotate/lift.
+*Examples*:
+
+	:M,80,80,2,4  (animate lifter 80% power, rotatary random(20%-80%), minimum interval 2 seconds for a duration of 2+random(4) seconds )
+	:M,50,40,5,5  (animate lifter 50% power, rotatary random(20%-40%) power, 80% minimum interval 5 seconds for a duration of 5+5 seconds )

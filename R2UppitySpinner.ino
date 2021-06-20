@@ -17,6 +17,11 @@
 #define ROTARY_THROTTLE_LATENCY             25
 #define ROTARY_FUDGE_POSITION               5
 
+// Default random duration of 'M' movement mode
+#define MOVEMODE_MIN_DURATION               30      // minimum 30 seconds
+#define MOVEMODE_MAX_DURATION               30      // random range additional 30 seconds
+#define MOVEMODE_MAX_INTERVAL               5       // default interval between random commands
+
 ///////////////////////////////////
 // RISKIER CONFIGURATION OPTIONS
 ///////////////////////////////////
@@ -1002,7 +1007,7 @@ public:
                     resetRotaryPosition();
                     encoder_rotary_last_status = millis();
                     bool rotaryWasHome = true;
-                    rotaryMotorMove(-(ROTARY_MINIMUM_POWER/100.0));
+                    rotaryMotorMove(-((ROTARY_MINIMUM_POWER+5)/100.0));
                     delay(100);
                     RotaryStatus rotaryStatus;
                     encoder_rotary_stop_limit = true;
@@ -1372,6 +1377,116 @@ public:
         Serial.println(F("SUCCESS"));
         sCalibrating = false;
         return true;
+    }
+
+    static void animate()
+    {
+        bool retry = false;
+        rotaryMotorUpdate();
+        if (fMoveMode)
+        {
+            if (fMoveModeNextCmd < millis())
+            {
+                do
+                {
+                    switch (random(3))
+                    {
+                        case 0:
+                        {
+                            // random position random speed in range
+                            uint8_t pos = random(100);
+                            uint8_t speedpercentage = min(max(fMoveModeNextLifterSpeed, sMinimumPower), 100);
+                            if (!seekToPosition(pos/100.0, speedpercentage/100.0))
+                            {
+                                // position failed lets retry once
+                                retry = !retry;
+                                continue;
+                            }
+                            Serial.print("MOVE SEEK ");
+                            Serial.print(pos);
+                            Serial.print(", ");
+                            Serial.println(speedpercentage);
+                            retry = false;
+                            break;
+                        }
+                        case 1:
+                        {
+                            // rotary command but rotary not allowed raise lifter to 100%
+                            if (!rotaryAllowed())
+                                seekToPosition(1.0, fMoveModeNextLifterSpeed/100.0);
+
+                            // rotate scope
+                            int32_t speed = fMoveModeNextRotarySpeed;
+                            if (speed == 0)
+                                speed = 80;
+                            speed = max(speed, ROTARY_MINIMUM_POWER);
+                            speed = -speed + random(speed*2);
+                            if (abs(speed) < ROTARY_MINIMUM_POWER+5)
+                                speed = (speed < 0) ? -ROTARY_MINIMUM_POWER-5 : ROTARY_MINIMUM_POWER+5;
+                            speed = min(max(speed, -100), 100);
+                            if (speed == 0)
+                            {
+                                rotateHome();
+                            }
+                            else
+                            {
+                                rotaryMotorSpeed(speed / 100.0);
+                            }
+                            Serial.print("MOVE ROTATE ");
+                            Serial.println(speed);
+                            retry = false;
+                            break;
+                        }
+                        case 2:
+                        {
+                            // rotary command but rotary not allowed raise lifter to 100%
+                            if (!rotaryAllowed())
+                                seekToPosition(1.0, fMoveModeNextLifterSpeed/100.0);
+
+                            // rotate scope degree
+                            uint32_t speedpercentage = max(fMoveModeNextRotarySpeed, ROTARY_MINIMUM_POWER);
+                            speedpercentage = random(fMoveModeNextRotarySpeed - ROTARY_MINIMUM_POWER) + ROTARY_MINIMUM_POWER;
+                            float speed = speedpercentage/100.0;
+                            float maxspeed = speed;
+                            if (speedpercentage < fMoveModeNextRotarySpeed)
+                            {
+                                speedpercentage = random(fMoveModeNextRotarySpeed - speedpercentage) + speedpercentage;
+                                maxspeed = speedpercentage/100.0;
+                            }
+                            rotaryMotorAbsolutePosition(random(360), speed, maxspeed);
+                            Serial.print("MOVE DEGREES ");
+                            Serial.print(speed*100L);
+                            Serial.print(", ");
+                            Serial.println(maxspeed*100L);
+                            retry = false;
+                            break;
+                        }
+                    }
+                } while (retry);
+                // Time for next command
+                fMoveModeNextCmd = millis() + random(fMoveModeNextIntervalMin, fMoveModeNextIntervalMax) * 1000L;
+            }
+        }
+    }
+
+    static void moveMode(uint8_t nextLifterSpeed, uint8_t nextRotarySpeed, uint8_t nextIntervalMin, uint8_t nextIntervalMax)
+    {
+        fMoveMode = true;
+        fMoveModeNextLifterSpeed = nextLifterSpeed;
+        fMoveModeNextRotarySpeed = nextRotarySpeed;
+        fMoveModeNextIntervalMin = nextIntervalMin;
+        fMoveModeNextIntervalMax = nextIntervalMax;
+        fMoveModeNextCmd = millis();
+    }
+
+    static void moveModeEnd()
+    {
+        fMoveMode = false;
+        fMoveModeNextLifterSpeed = 0;
+        fMoveModeNextRotarySpeed = 0;
+        fMoveModeNextIntervalMin = 0;
+        fMoveModeNextIntervalMax = 0;
+        fMoveModeNextCmd = 0;
     }
 
 private:
@@ -2149,6 +2264,13 @@ public:
     static uint32_t fRotaryEncoderLastStatus;
     static long fRotaryEncoderLastTick;
     static bool fRotaryMoving;
+
+    static bool fMoveMode;
+    static uint32_t fMoveModeNextCmd;
+    static uint8_t fMoveModeNextLifterSpeed;
+    static uint8_t fMoveModeNextRotarySpeed;
+    static uint8_t fMoveModeNextIntervalMin;
+    static uint8_t fMoveModeNextIntervalMax;
 };
 
 volatile long PeriscopeLifter::encoder_lifter_ticks;
@@ -2176,6 +2298,13 @@ uint32_t PeriscopeLifter::fRotaryThrottleUpdate = 0;
 uint32_t PeriscopeLifter::fRotaryEncoderLastStatus;
 long PeriscopeLifter::fRotaryEncoderLastTick;
 bool PeriscopeLifter::fRotaryMoving = 0;
+
+bool PeriscopeLifter::fMoveMode;
+uint32_t PeriscopeLifter::fMoveModeNextCmd;
+uint8_t PeriscopeLifter::fMoveModeNextLifterSpeed;
+uint8_t PeriscopeLifter::fMoveModeNextRotarySpeed;
+uint8_t PeriscopeLifter::fMoveModeNextIntervalMin;
+uint8_t PeriscopeLifter::fMoveModeNextIntervalMax;
 
 ///////////////////////////////////////////////////////
 
@@ -2313,6 +2442,8 @@ bool startswith(const char* &cmd, const char* str)
 
 bool processLifterCommand(const char* cmd)
 {
+    // move mode ends on the next serial command
+    lifter.moveModeEnd();
     switch (*cmd++)
     {
         case 'S':
@@ -2359,6 +2490,40 @@ bool processLifterCommand(const char* cmd)
                 Serial.print(F(" SPEED: ")); Serial.println(int(speed*100));
                 lifter.seekToPosition(pos/100.0, speed);
             }
+            break;
+        }
+        case 'M':
+        {
+            // move\
+            uint8_t nextLifterSpeed = sMinimumPower+5;
+            uint8_t nextRotarySpeed = ROTARY_MINIMUM_POWER+5;
+            uint8_t nextIntervalMin = 1 + random(MOVEMODE_MAX_INTERVAL);
+            uint8_t nextIntervalMax = nextIntervalMin + random(MOVEMODE_MAX_INTERVAL);
+            if (*cmd == ',')
+            {
+                // command lifter speed
+                nextLifterSpeed = strtolu(cmd+1, &cmd);
+                nextLifterSpeed = max(nextLifterSpeed, sMinimumPower);
+            }
+            if (*cmd == ',')
+            {
+                // command speed
+                nextRotarySpeed = strtolu(cmd+1, &cmd);
+                nextRotarySpeed = max(nextRotarySpeed, ROTARY_MINIMUM_POWER+5);
+            }
+            if (*cmd == ',')
+            {
+                // command interval
+                nextIntervalMin = strtolu(cmd+1, &cmd);
+                nextIntervalMin = max(nextIntervalMin, 1); // minimum duration 1 second
+            }
+            if (*cmd == ',')
+            {
+                // command interval
+                nextIntervalMax = strtolu(cmd+1, &cmd);
+                nextIntervalMax = max(nextIntervalMax, nextIntervalMin+1); // minimum duration + 1 second
+            }
+            lifter.moveMode(nextLifterSpeed, nextRotarySpeed, nextIntervalMin, nextIntervalMax);
             break;
         }
         case 'R':
@@ -2750,6 +2915,49 @@ void processConfigureCommand(const char* cmd)
                             Serial.println(degrees);
                         break;
                     }
+                    case 'M':
+                    {
+                        // move
+                        uint8_t nextLifterSpeed = sMinimumPower+5;
+                        uint8_t nextRotarySpeed = ROTARY_MINIMUM_POWER+5;
+                        uint8_t nextIntervalMin = MOVEMODE_MAX_INTERVAL;
+                        uint8_t nextIntervalMax = MOVEMODE_MAX_INTERVAL;
+                        cmd++;
+                        if (*cmd == ',')
+                        {
+                            // command lifter speed
+                            nextLifterSpeed = strtolu(cmd+1, &cmd);
+                            nextLifterSpeed = max(nextLifterSpeed, sMinimumPower);
+                        }
+                        if (*cmd == ',')
+                        {
+                            // command speed
+                            nextRotarySpeed = strtolu(cmd+1, &cmd);
+                            nextRotarySpeed = max(nextRotarySpeed, ROTARY_MINIMUM_POWER+5);
+                        }
+                        if (*cmd == ',')
+                        {
+                            // command interval
+                            nextIntervalMin = strtolu(cmd+1, &cmd);
+                            nextIntervalMin = max(nextIntervalMin, 1); // minimum duration 1 second
+                        }
+                        if (*cmd == ',')
+                        {
+                            // command interval
+                            nextIntervalMax = strtolu(cmd+1, &cmd);
+                            nextIntervalMax = max(nextIntervalMax, nextIntervalMin+1); // minimum duration + 1 second
+                        }
+                        Serial.print("Move Continous: ");
+                        Serial.print(" Lifter: ");
+                        Serial.print(nextLifterSpeed);
+                        Serial.print(" Rotary: ");
+                        Serial.print(nextRotarySpeed);
+                        Serial.print(" Min: ");
+                        Serial.print(nextIntervalMin);
+                        Serial.print(" Max: ");
+                        Serial.println(nextIntervalMax);
+                        break;
+                    }
                     case 'W':
                     {
                         // seconds
@@ -2873,7 +3081,7 @@ bool processCommand(const char* cmd, bool firstCommand)
 void loop()
 {
     handleI2CEvent();
-    lifter.rotaryMotorUpdate();
+    lifter.animate();
 
     // append commands to command buffer
     if (Serial.available())
