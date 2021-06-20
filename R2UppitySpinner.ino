@@ -8,7 +8,7 @@
 ///////////////////////////////////
 
 // If debug is enabled the serial baud rate will be 57600
-#define SERIAL_BAUD_RATE                    2400
+#define SERIAL_BAUD_RATE                    9600
 #define I2C_ADDRESS                         0x20
 #define CONSOLE_BUFFER_SIZE                 300
 #define COMMAND_BUFFER_SIZE                 256
@@ -2325,9 +2325,9 @@ static void i2cEvent(int /*howMany*/)
         // Ignore leading whitespace
         if (i != 0 || !isspace(ch))
         {
-            if (ch >= 1 && ch <= 7)
+            if (ch >= 1 && ch <= 9)
             {
-                // Support IA periscope commands 1-7
+                // Support IA periscope commands 1-9
                 ch = '0'+ch;
                 sI2CCmdReady = true;
             }
@@ -2494,7 +2494,7 @@ bool processLifterCommand(const char* cmd)
         }
         case 'M':
         {
-            // move\
+            // move
             uint8_t nextLifterSpeed = sMinimumPower+5;
             uint8_t nextRotarySpeed = ROTARY_MINIMUM_POWER+5;
             uint8_t nextIntervalMin = 1 + random(MOVEMODE_MAX_INTERVAL);

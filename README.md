@@ -41,8 +41,8 @@ Store specified sequence (seq) as number in EEPROM.
 	#PS1:H                        (periscope down)
 	#PS2:P100                     (periscope up)
 	#PS3:P100:L5:R30              (search light counter-clockwise)
-	#PS4:P100,100:L7:MC,80,80,2,4 (random fast)
-	#PS5:P100:L7:MC,50,40,5,5     (random slow)
+	#PS4:P100,100:L7:M,80,80,2,4  (random fast)
+	#PS5:P100:L7:M,50,40,5,5      (random slow)
 	#PS6:A0                       (face forward)
 	#PS7:P100:L5:R-30             (search light clockwise)
 	#PS0:H:L0:P100,5:W2:P50:W2:P85,35:A90,25:W2:A270,20,100:W2:P100,100:L5:R50:W4:H
