@@ -2443,11 +2443,13 @@ bool startswith(const char* &cmd, const char* str)
 bool processLifterCommand(const char* cmd)
 {
     // move mode ends on the next serial command
-    lifter.moveModeEnd();
     switch (*cmd++)
     {
         case 'S':
         {
+            // stop move mode
+            lifter.moveModeEnd();
+
             // play sequence
             uint32_t seq = strtolu(cmd, &cmd);
             if (*cmd == '\0')
@@ -2462,6 +2464,9 @@ bool processLifterCommand(const char* cmd)
         }
         case 'P':
         {
+            // stop move mode
+            lifter.moveModeEnd();
+
             // seek lifter to position
             float speed = 1.0;
             uint32_t pos;
@@ -2494,6 +2499,9 @@ bool processLifterCommand(const char* cmd)
         }
         case 'M':
         {
+            // stop move mode
+            lifter.moveModeEnd();
+
             // move
             uint8_t nextLifterSpeed = sMinimumPower+5;
             uint8_t nextRotarySpeed = ROTARY_MINIMUM_POWER+5;
@@ -2528,6 +2536,9 @@ bool processLifterCommand(const char* cmd)
         }
         case 'R':
         {
+            // stop move mode
+            lifter.moveModeEnd();
+
             // spin rotary speed
             int32_t speed = 0;
             if (*cmd == 'R')
@@ -2561,6 +2572,9 @@ bool processLifterCommand(const char* cmd)
         }
         case 'A':
         {
+            // stop move mode
+            lifter.moveModeEnd();
+
             // position absolute degree
             float speed = 0;
             float maxspeed = 0;
@@ -2626,6 +2640,9 @@ bool processLifterCommand(const char* cmd)
         }
         case 'D':
         {
+            // stop move mode
+            lifter.moveModeEnd();
+
             // position relative degree
             int32_t degrees;
             if (*cmd == 'R' && (cmd[1] == ',' || cmd[1] == '\0'))
@@ -2708,6 +2725,9 @@ bool processLifterCommand(const char* cmd)
         }
         case 'H':
         {
+            // stop move mode
+            lifter.moveModeEnd();
+
             // return home
             lifter.ensureSafetyManeuver();
             if (!lifter.lifterBottomLimit())
@@ -2732,6 +2752,9 @@ bool processLifterCommand(const char* cmd)
             break;
         }
         default:
+            // stop move mode
+            lifter.moveModeEnd();
+
             Serial.println(F("Invalid"));
             return false;
     }
