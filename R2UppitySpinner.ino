@@ -177,13 +177,13 @@ public:
 
     static bool lifterTopLimit()
     {
-        bool limit = !digitalRead(PIN_LIFTER_TOPLIMIT);
+        bool limit = (digitalRead(PIN_LIFTER_TOPLIMIT) == fLifterLimitSetting);
         return limit;
     }
 
     static bool lifterBottomLimit()
     {
-        bool limit = !digitalRead(PIN_LIFTER_BOTLIMIT);
+        bool limit = (digitalRead(PIN_LIFTER_BOTLIMIT) == fLifterLimitSetting);
         return limit;
     }
 
@@ -200,7 +200,7 @@ public:
 
     static bool rotaryHomeLimit()
     {
-        bool limit = !digitalRead(PIN_ROTARY_LIMIT);
+        bool limit = (digitalRead(PIN_ROTARY_LIMIT) == fRotaryLimitSetting);
         return limit;
     }
 
@@ -1783,12 +1783,18 @@ public:
             uint16_t height = 0;
             uint32_t baudrate = 0;
             uint8_t i2caddr = 0;
+            bool rotaryLimitSetting = false;
+            bool lifterLimitSetting = false;
             bool upcal = false;
             bool downcal = false;
+            uint8_t limitFlags = 0;
             EEPROM.get(offs, siz); offs += sizeof(siz);
             EEPROM.get(offs, minpower); offs += sizeof(minpower);
             EEPROM.get(offs, height); offs += sizeof(height);
-            EEPROM.get(offs, upcal); offs += sizeof(upcal);
+            EEPROM.get(offs, limitFlags); offs += sizeof(limitFlags);
+            upcal = ((limitFlags & 1) != 0);
+            rotaryLimitSetting = ((limitFlags & 2) != 0);
+            lifterLimitSetting = ((limitFlags & 4) != 0);
             EEPROM.get(offs, downcal); offs += sizeof(downcal);
             EEPROM.get(offs, baudrate); offs += sizeof(baudrate);
             EEPROM.get(offs, i2caddr); offs += sizeof(i2caddr);
@@ -1825,6 +1831,8 @@ public:
             sUpLimitsCalibrated = upcal;
             sDownLimitsCalibrated = downcal;
             sI2CAddress = i2caddr;
+            fRotaryLimitSetting = rotaryLimitSetting;
+            fLifterLimitSetting = lifterLimitSetting;
             if (sBaudRate != baudrate)
             {
                 sBaudRate = baudrate;
@@ -1847,7 +1855,10 @@ public:
         size_t siz_offs = offs; offs += sizeof(siz);
         EEPROM.put(offs, sMinimumPower); offs += sizeof(sMinimumPower);
         EEPROM.put(offs, sLifterDistance); offs += sizeof(sLifterDistance);
-        EEPROM.put(offs, sUpLimitsCalibrated); offs += sizeof(sUpLimitsCalibrated);
+        uint8_t limitFlags = sUpLimitsCalibrated;
+        limitFlags |= (uint8_t(fRotaryLimitSetting) << 1);
+        limitFlags |= (uint8_t(fLifterLimitSetting) << 2);
+        EEPROM.put(offs, limitFlags); offs += sizeof(limitFlags);
         EEPROM.put(offs, sDownLimitsCalibrated); offs += sizeof(sDownLimitsCalibrated);
         EEPROM.put(offs, sBaudRate); offs += sizeof(sBaudRate);
         EEPROM.put(offs, sI2CAddress); offs += sizeof(sI2CAddress);
@@ -2271,6 +2282,9 @@ public:
     static uint8_t fMoveModeNextRotarySpeed;
     static uint8_t fMoveModeNextIntervalMin;
     static uint8_t fMoveModeNextIntervalMax;
+
+    static bool fLifterLimitSetting;
+    static bool fRotaryLimitSetting;
 };
 
 volatile long PeriscopeLifter::encoder_lifter_ticks;
@@ -2291,13 +2305,15 @@ uint32_t PeriscopeLifter::encoder_rotary_last_status;
 
 bool PeriscopeLifter::fMotorsEnabled;
 uint32_t PeriscopeLifter::fMotorsEnabledTime;
-float PeriscopeLifter::fLifterThrottle = 0;
-float PeriscopeLifter::fRotarySpeed = 0;
-float PeriscopeLifter::fRotaryThrottle = 0;
-uint32_t PeriscopeLifter::fRotaryThrottleUpdate = 0;
+float PeriscopeLifter::fLifterThrottle;
+float PeriscopeLifter::fRotarySpeed;
+float PeriscopeLifter::fRotaryThrottle;
+uint32_t PeriscopeLifter::fRotaryThrottleUpdate;
 uint32_t PeriscopeLifter::fRotaryEncoderLastStatus;
 long PeriscopeLifter::fRotaryEncoderLastTick;
-bool PeriscopeLifter::fRotaryMoving = 0;
+bool PeriscopeLifter::fRotaryMoving;
+bool PeriscopeLifter::fLifterLimitSetting;
+bool PeriscopeLifter::fRotaryLimitSetting;
 
 bool PeriscopeLifter::fMoveMode;
 uint32_t PeriscopeLifter::fMoveModeNextCmd;
@@ -2797,6 +2813,34 @@ void processConfigureCommand(const char* cmd)
             lifter.writeSettingsToEEPROM();
         }
     }
+    else if (startswith(cmd, "#PN"))
+    {
+        if (cmd[1] == 'L')
+        {
+            Serial.println("LIFT");
+            // PNCL - lifter limit normally closed
+            // PNOL - lifter limit normally open
+           if ((cmd[0] == 'C' && lifter.fLifterLimitSetting) || 
+                (cmd[0] == 'O' && !lifter.fLifterLimitSetting))
+            {
+                Serial.println("Changed");
+                lifter.fLifterLimitSetting = !lifter.fLifterLimitSetting;
+                lifter.writeSettingsToEEPROM();
+            }
+        }
+        else if (cmd[1] == 'R')
+        {
+            // PNCR - rotary limit normally closed
+            // PNOR - rotary limit normally open
+            if ((cmd[0] == 'C' && lifter.fRotaryLimitSetting) || 
+                (cmd[0] == 'O' && !lifter.fRotaryLimitSetting))
+            {
+                Serial.println("Changed");
+                lifter.fRotaryLimitSetting = !lifter.fRotaryLimitSetting;
+                lifter.writeSettingsToEEPROM();
+            }
+        }
+    }
     else if (startswith(cmd, "#PI2C"))
     {
         uint8_t addr = strtolu(cmd, &cmd);
@@ -3185,6 +3229,13 @@ void loop()
     {
         DEBUG_PRINTLN("DISABLE MOTORS");
         lifter.disableMotors();
+    }
+    static bool sHome;
+    if (sHome != lifter.rotaryHomeLimit())
+    {
+        sHome = lifter.rotaryHomeLimit();
+        if (sHome)
+            Serial.println("HOME");
     }
 #ifdef USE_DEBUG
     static bool sLastTop;
