@@ -171,6 +171,71 @@ public:
         kLightKit_Sparkle = 7
     };
 
+    static void println()
+    {
+        Serial.println();
+    }
+
+    static void print(int num)
+    {
+        Serial.print(num);
+    }
+
+    static void print(long num)
+    {
+        Serial.print(num);
+    }
+
+    static void print(unsigned int num)
+    {
+        Serial.print(num);
+    }
+
+    static void print(float num)
+    {
+        Serial.print(num);
+    }
+
+    static void print(const char* str)
+    {
+        Serial.print(str);
+    }
+
+    static void print(const __FlashStringHelper* str)
+    {
+        Serial.print(str);
+    }
+
+    static void println(int num)
+    {
+        Serial.println(num);
+    }
+
+    static void println(long num)
+    {
+        Serial.println(num);
+    }
+
+    static void println(unsigned int num)
+    {
+        Serial.println(num);
+    }
+
+    static void println(float num)
+    {
+        Serial.println(num);
+    }
+
+    static void println(const char* str)
+    {
+        Serial.println(str);
+    }
+
+    static void println(const __FlashStringHelper* str)
+    {
+        Serial.println(str);
+    }
+
     ///////////////////////////////////
     // Read limit switches
     ///////////////////////////////////
@@ -586,12 +651,12 @@ public:
             speed = (ROTARY_MINIMUM_POWER/100.0);
         if (maxspeed == 0)
             maxspeed = speed;
-        Serial.print(F("ROTATE "));
-        Serial.print(degrees);
-        Serial.print(F(" Speed: "));
-        Serial.print(speed);
-        Serial.print(F(" Max: "));
-        Serial.println(maxspeed);
+        print(F("ROTATE "));
+        print(degrees);
+        print(F(" Speed: "));
+        print(speed);
+        print(F(" Max: "));
+        println(maxspeed);
         // degrees = -degrees;
         RotaryStatus rotaryStatus;
         while (!moveScopeToTarget(rotaryMotorCurrentPosition(), normalize(degrees), ROTARY_FUDGE_POSITION, speed, maxspeed, m))
@@ -843,9 +908,9 @@ public:
 
         if (readSettingsFromEEPROM())
         {
-            Serial.println(F("Read saved calibration"));
+            println(F("Read saved calibration"));
         }
-        Serial.println(F("Generating random"));
+        //println(F("Generating random"));
         randomSeed(Enthropy::generate());
     }
 
@@ -956,7 +1021,7 @@ public:
         // On startup we'll first seek to the top and make sure
         // that the rotary is in home position. Then seek back down.
         // This should safely clear any state the scope was in.
-        Serial.println("SAFETY");
+        println("SAFETY");
         if (seekToTop(0.8, false))
         {
         #ifndef DISABLE_SAFETY_MANEUVER
@@ -974,7 +1039,7 @@ public:
 
                 if (!rotaryHomeLimit())
                 {
-                    Serial.println("NOT HOME TRY SPIN AROUND");
+                    println("NOT HOME TRY SPIN AROUND");
                     bool rotaryWasHome = true;
                     RotaryStatus rotaryStatus;
                     rotaryMotorMove(-(ROTARY_MINIMUM_POWER/100.0));
@@ -1003,7 +1068,7 @@ public:
                 }
                 if (rotaryHomeLimit())
                 {
-                    Serial.println("FIND ENCODER LENGTH");
+                    println("FIND ENCODER LENGTH");
                     resetRotaryPosition();
                     encoder_rotary_last_status = millis();
                     bool rotaryWasHome = true;
@@ -1039,8 +1104,8 @@ public:
                     rotaryMotorStop();
                     delay(100);
                     sRotaryCircleEncoderCount = abs(getRotaryPosition());
-                    Serial.print("ROTARY ENCODER COUNT = ");
-                    Serial.println(sRotaryCircleEncoderCount);
+                    print("ROTARY ENCODER COUNT = ");
+                    println(sRotaryCircleEncoderCount);
                     if (sRotaryCircleEncoderCount < 1000)
                     {
                         // BAD try again
@@ -1061,8 +1126,8 @@ public:
             setLightShow(kLightKit_Off);
             if (!isRotaryAtRest())
             {
-                Serial.println(F("ABORT: ROTARY NOT HOME"));
-                Serial.println(rotaryMotorCurrentPosition());
+                println(F("ABORT: ROTARY NOT HOME"));
+                println(rotaryMotorCurrentPosition());
                 return false;
             }
         #endif
@@ -1098,7 +1163,7 @@ public:
         sMinimumPower = max(sMinimumPower, LIFTER_MINIMUM_POWER);
         if (!safetyManeuver())
         {
-            Serial.println(F("ABORT: FAILED SAFETY MANEUVER"));
+            println(F("ABORT: FAILED SAFETY MANEUVER"));
             sCalibrating = false;
             return false;
         }
@@ -1107,7 +1172,7 @@ public:
         {
             if (!safetyManeuver())
             {
-                Serial.println(F("ABORT: FAILED SAFETY MANEUVER"));
+                println(F("ABORT: FAILED SAFETY MANEUVER"));
                 sCalibrating = false;
                 return false;
             }
@@ -1120,8 +1185,6 @@ public:
         sMinimumPower = 0;
 
         long homePosition = getLifterPosition();
-        Serial.println(F("CALIBRATE MINIMUM POWER"));
-        Serial.println(homePosition);
         int topSpeed = LIFTER_MINIMUM_POWER;
         for (topSpeed = LIFTER_MINIMUM_POWER; topSpeed <= 100; topSpeed += 5)
         {
@@ -1136,8 +1199,7 @@ public:
 
         long targetDistance = sLifterDistance;
 
-        Serial.println(F("CALIBRATE TO TOP"));
-        Serial.print(F("MINIMUM POWER: ")); Serial.println(topSpeed);
+        println(F("SEEK TO TOP"));
         for (; sCalibrating && topSpeed <= 100; topSpeed += 5)
         {
             unsigned tries = 0;
@@ -1148,7 +1210,7 @@ public:
                 goto retry;
             }
             long outputLimit = max(topSpeed * OUTPUT_LIMIT_PRESCALE, 10);
-            Serial.print(F("SPEED: ")); Serial.println(topSpeed);
+            print(F("SPEED: ")); println(topSpeed);
             while (outputLimit >= 0)
             {
                 tries++;
@@ -1182,7 +1244,7 @@ public:
 
                     if (!lifterStatus.isMoving())
                     {
-                        Serial.println(F("ABORT"));
+                        println(F("ABORT"));
                         break;
                     }
                 }
@@ -1241,7 +1303,7 @@ public:
             }
             if (!sCalibrating || serialAbort())
             {
-                Serial.println(F("SERIAL ABORT"));
+                println(F("SERIAL ABORT"));
                 success = false;
                 break;
             }
@@ -1249,13 +1311,13 @@ public:
         // Abort calibration
         if (!success)
         {
-            Serial.println(F("CALIBRATION ABORTED"));
+            println(F("CALIBRATION ABORTED"));
             sCalibrating = false;
             return false;
         }
 
         sUpLimitsCalibrated = true;
-        Serial.println(F("CALIBRATE TO BOTTOM"));
+        println(F("SEEK TO BOTTOM"));
         DEBUG_PRINT(F("TOP LIMIT SWITCH: "));
         DEBUG_PRINTLN(lifterTopLimit());
         DEBUG_PRINT(F("BOTTOM LIMIT SWITCH: "));
@@ -1268,13 +1330,13 @@ public:
             float limit;
             if (!getUpOutputLimit(topSpeed/100.0f, limit))
                 continue;
-            long outputLimit = max(limit*2, 160);
+            long outputLimit = max(limit*1.5, 160);
             while (success && outputLimit > 0)
             {
                 long minEncoderVal = 0x7FFFFFFFL;
                 if (!seekToTop(0.8))
                 {
-                    Serial.println(F("SEEK TO TOP FAILED - ABORT"));
+                    println(F("SEEK TO TOP FAILED - ABORT"));
                     topSpeed = 200;
                     success = false;
                     break;
@@ -1289,22 +1351,15 @@ public:
                 bool botLimit;
                 long start_ticks = getLifterPosition();
                 LifterStatus lifterStatus;
-                for (;;)
+                do
                 {
                     long encoder_ticks = getLifterPosition();
                     minEncoderVal = min(minEncoderVal, encoder_ticks);
                     botLimit = lifterBottomLimit();
-                    if (botLimit || serialAbort())
-                        break;
                     steering.setCurrentDistance(encoder_ticks);
                     lifterMotorMove(steering.getThrottle() * (topSpeed / 100.0));
-
-                    if (!lifterStatus.isMoving())
-                    {
-                        Serial.println(F("ABORT"));
-                        break;
-                    }
                 }
+                while (!botLimit && !serialAbort() && lifterStatus.isMoving());
                 lifterMotorStop();
                 if (start_ticks == getLifterPosition())
                 {
@@ -1347,7 +1402,7 @@ public:
                     // DEBUG_PRINT(encoder_ticks);
                     // DEBUG_PRINT(F(" LIMIT NOT REACHED - RETRYING "));
                     // DEBUG_PRINT(targetDistance - encoder_ticks);
-                    outputLimit -= max(targetDistance - encoder_ticks, 1);
+                    outputLimit -= max(encoder_ticks*2, 1);
                     if (outputLimit < 0)
                         outputLimit = 0;
                     // DEBUG_PRINT(F(" NEW LIMIT : ")); DEBUG_PRINTLN(outputLimit);
@@ -1358,7 +1413,7 @@ public:
             }
             if (!sCalibrating || serialAbort())
             {
-                Serial.println(F("SERIAL ABORT"));
+                println(F("SERIAL ABORT"));
                 success = false;
                 break;
             }
@@ -1366,7 +1421,7 @@ public:
         seekToBottom();
         if (!success)
         {
-            Serial.println(F("CALIBRATION ABORTED"));
+            println(F("CALIBRATION ABORTED"));
             sMinimumPower = max(sMinimumPower, LIFTER_MINIMUM_POWER);
             sCalibrating = false;
             return false;
@@ -1374,7 +1429,7 @@ public:
 
         sDownLimitsCalibrated = true;
         writeSettingsToEEPROM();
-        Serial.println(F("SUCCESS"));
+        println(F("SUCCESS"));
         sCalibrating = false;
         return true;
     }
@@ -1402,10 +1457,10 @@ public:
                                 retry = !retry;
                                 continue;
                             }
-                            Serial.print("MOVE SEEK ");
-                            Serial.print(pos);
-                            Serial.print(", ");
-                            Serial.println(speedpercentage);
+                            print("MOVE SEEK ");
+                            print(pos);
+                            print(", ");
+                            println(speedpercentage);
                             retry = false;
                             break;
                         }
@@ -1432,8 +1487,8 @@ public:
                             {
                                 rotaryMotorSpeed(speed / 100.0);
                             }
-                            Serial.print("MOVE ROTATE ");
-                            Serial.println(speed);
+                            print("MOVE ROTATE ");
+                            println(speed);
                             retry = false;
                             break;
                         }
@@ -1454,10 +1509,10 @@ public:
                                 maxspeed = speedpercentage/100.0;
                             }
                             rotaryMotorAbsolutePosition(random(360), speed, maxspeed);
-                            Serial.print("MOVE DEGREES ");
-                            Serial.print(speed*100L);
-                            Serial.print(", ");
-                            Serial.println(maxspeed*100L);
+                            print("MOVE DEGREES ");
+                            print(speed*100L);
+                            print(", ");
+                            println(maxspeed*100L);
                             retry = false;
                             break;
                         }
@@ -1625,7 +1680,7 @@ public:
         if (!usePID)
         {
             float mpower = sMinimumPower/100.0 + 0.05 + 0.1 * speed;
-            Serial.print(F(" MOTOR: ")); Serial.println(mpower);
+            print(F(" MOTOR: ")); println(mpower);
 
             // seek up
             bool topLimit;
@@ -1908,7 +1963,7 @@ public:
             {
                 uint8_t tag = EEPROM_END_TAG;
                 EEPROM.put(offs, tag);
-                Serial.println(F("Cleared"));
+                println(F("Cleared"));
             }
         }
     }
@@ -1932,26 +1987,26 @@ public:
                     EEPROM.get(offs, snum); offs += sizeof(snum);
                     if (snum == EEPROM_END_TAG)
                         break;
-                    Serial.print('[');
-                    Serial.print(snum);
-                    Serial.print(']');
-                    Serial.print(' ');
-                    Serial.print(':');
-                    Serial.print('P');
+                    print('[');
+                    print(snum);
+                    print(']');
+                    print(' ');
+                    print(':');
+                    print('P');
                     uint8_t len;
                     EEPROM.get(offs, len); offs += sizeof(len);
                     while (len > 0)
                     {
                         char ch;
                         EEPROM.get(offs, ch); offs += sizeof(ch);
-                        Serial.print((char)ch);
+                        print((char)ch);
                         len--;
                     }
-                    Serial.println();
+                    println();
                 }
             }
         }
-        Serial.println(F("Complete"));
+        println(F("Complete"));
     }
 
     static void listSortedCommandsFromEEPROM()
@@ -2007,12 +2062,12 @@ public:
                         break;
                     if (snum == i)
                     {
-                        Serial.print('[');
-                        Serial.print(snum);
-                        Serial.print(']');
-                        Serial.print(' ');
-                        Serial.print(':');
-                        Serial.print('P');
+                        print('[');
+                        print(snum);
+                        print(']');
+                        print(' ');
+                        print(':');
+                        print('P');
                     }
                     uint8_t len;
                     EEPROM.get(scanoffs, len); scanoffs += sizeof(len);
@@ -2022,10 +2077,10 @@ public:
                         {
                             char ch;
                             EEPROM.get(scanoffs, ch); scanoffs += sizeof(ch);
-                            Serial.print((char)ch);
+                            print((char)ch);
                             len--;
                         }
-                        Serial.println();
+                        println();
                         break;
                     }
                     else
@@ -2035,7 +2090,7 @@ public:
                 }
             }
         }
-        Serial.println(F("Complete"));
+        println(F("Complete"));
     #undef MAPWORD_BIT
     #undef SET_MAPWORD_BIT
     #undef BIT_MAPWORD
@@ -2197,7 +2252,7 @@ public:
         }
         else
         {
-            Serial.println("Must calibrate first");
+            println("Must calibrate first");
         }
         return false;
     }
@@ -2791,7 +2846,7 @@ void processConfigureCommand(const char* cmd)
     }
     else if (startswith(cmd, "#PL"))
     {
-        lifter.listSortedCommandsFromEEPROM();//listCommandsFromEEPROM();
+        lifter.listSortedCommandsFromEEPROM();
     }
     else if (startswith(cmd, "#PD"))
     {
