@@ -176,6 +176,11 @@ public:
         Serial.println();
     }
 
+    static void print(char num)
+    {
+        Serial.print(num);
+    }
+
     static void print(int num)
     {
         Serial.print(num);
@@ -204,6 +209,11 @@ public:
     static void print(const __FlashStringHelper* str)
     {
         Serial.print(str);
+    }
+
+    static void println(char num)
+    {
+        Serial.println(num);
     }
 
     static void println(int num)
