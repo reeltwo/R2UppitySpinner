@@ -40,8 +40,17 @@
 #define EEPROM_CMD_MAGIC            0xf005ba11
 #define EEPROM_END_TAG              0xff
 
+///////////////////////////////////
+// This option is for builders working on their own custom lifters.
+// It will leave the lifter logic intact but act as if there is no rotary.
+///////////////////////////////////
+//#define DISABLE_ROTARY
+///////////////////////////////////
+
+#ifdef DISABLE_ROTARY
 // DO NOT ENABLE THIS UNLESS YOU REMOVE THE ROTARY UNIT
-//#define DISABLE_SAFETY_MANEUVER
+#define DISABLE_SAFETY_MANEUVER
+#endif
 
 ///////////////////////////////////
 // --- Lifter mechanism
@@ -275,8 +284,13 @@ public:
 
     static bool rotaryHomeLimit()
     {
+    #ifdef DISABLE_ROTARY
+        // No rotary unit. Always in home position
+        return true;
+    #else
         bool limit = (digitalRead(PIN_ROTARY_LIMIT) == fRotaryLimitSetting);
         return limit;
+    #endif
     }
 
     static long getRotaryPosition()
@@ -488,7 +502,12 @@ public:
 
     static bool rotaryAllowed()
     {
+    #ifdef DISABLE_ROTARY
+        // Rotary motion not allowed
+        return false;
+    #else
         return (getLifterPosition() > ROTARY_MINIMUM_HEIGHT);
+    #endif
     }
 
     static void rotaryMotorSpeed(float speed)
@@ -500,6 +519,7 @@ public:
 
     static void rotaryMotorUpdate()
     {
+    #ifndef DISABLE_ROTARY
         uint32_t currentMillis = millis();
         if (currentMillis - fRotaryThrottleUpdate > ROTARY_THROTTLE_LATENCY)
         {
@@ -542,10 +562,12 @@ public:
                 fRotaryThrottleUpdate = currentMillis;
             }
         }
+    #endif
     }
 
     static void rotaryMotorMove(float throttle)
     {
+    #ifndef DISABLE_ROTARY
         bool reverse = (throttle < 0);
         throttle = min(max(abs(throttle), 0.0f), 1.0f);
         if (throttle < 0.10)
@@ -580,6 +602,7 @@ public:
             DEBUG_PRINT(F("ROTARY NOT ALLOWED: "));
             DEBUG_PRINTLN(getLifterPosition());
         }
+    #endif
     }
 
     static bool withinArc(double p1, double p2, double p3)
@@ -618,6 +641,7 @@ public:
 
     static bool moveScopeToTarget(int pos, int target, int fudge, float speed, float maxspeed, float &m)
     {
+    #ifndef DISABLE_ROTARY
         DEBUG_PRINT(F("MOVE raw=")); DEBUG_PRINT(getRotaryPosition());
         DEBUG_PRINT(F(" pos=")); DEBUG_PRINT(pos);
         DEBUG_PRINT(F(" target=")); DEBUG_PRINT(target);
@@ -646,6 +670,7 @@ public:
             return false;
         }
         DEBUG_PRINTLN();
+    #endif
         return true;
     }
 
@@ -656,6 +681,7 @@ public:
 
     static void rotaryMotorAbsolutePosition(int degrees, float speed = 0, float maxspeed = 0)
     {
+    #ifndef DISABLE_ROTARY
         float m = 0;
         if (speed == 0)
             speed = (ROTARY_MINIMUM_POWER/100.0);
@@ -679,10 +705,12 @@ public:
             }
         }
         rotaryMotorStop();
+    #endif
     }
 
     static void rotaryMotorRelativePosition(int relativeDegrees)
     {
+    #ifndef DISABLE_ROTARY
         long rotaryStartPos = getRotaryPosition();
         relativeDegrees = normalize(relativeDegrees);
         rotaryMotorMove((relativeDegrees > 0) ? (ROTARY_MINIMUM_POWER/100.0) : -(ROTARY_MINIMUM_POWER/100.0));
@@ -700,10 +728,12 @@ public:
             }
         }
         rotaryMotorStop();
+    #endif
     }
 
     static void rotateHome()
     {
+    #ifndef DISABLE_ROTARY
         if (shortestDistance(rotaryMotorCurrentPosition(), 0) > 0)
         {
             rotateLeftHome();
@@ -712,10 +742,12 @@ public:
         {
             rotateRightHome();
         }
+    #endif
     }
 
     static void rotateUntilHome(float speed)
     {
+    #ifndef DISABLE_ROTARY
         bool neg = (speed < 0);
         speed = (ROTARY_MINIMUM_POWER/100.0) + 0.1 * abs(speed);
         if (neg)
@@ -737,10 +769,12 @@ public:
         }
         rotaryMotorStop();
         encoder_rotary_stop_limit = false;
+    #endif
     }
 
     static void rotateLeftHome()
     {
+    #ifndef DISABLE_ROTARY
         // Ensure lifter is higher than minimum
         if (rotaryAllowed())
         {
@@ -759,10 +793,12 @@ public:
                 resetRotaryPosition();
             }
         }
+    #endif
     }
 
     static void rotateRightHome()
     {
+    #ifndef DISABLE_ROTARY
         // Ensure lifter is higher than minimum
         if (rotaryAllowed())
         {
@@ -789,6 +825,7 @@ public:
                 DEBUG_PRINTLN(F("NOT AT HOME"));
             }
         }
+    #endif
     }
 
     static void rotaryMotorStop()
@@ -809,12 +846,21 @@ public:
 
     static bool isRotarySpinning()
     {
+    #ifdef DISABLE_ROTARY
+        // Rotary is not moving
+        return false;
+    #else
         return fRotaryMoving;
+    #endif
     }
 
     static bool isRotaryAtRest()
     {
+    #ifdef DISABLE_ROTARY
+        return true;
+    #else
         return ((rotaryHomeLimit() || rotaryMotorCurrentPosition() == 0) && !fRotaryMoving);
+    #endif
     }
 
     ///////////////////////////////////
@@ -1132,6 +1178,7 @@ public:
             {
                 return false;
             }
+        #endif
 
             setLightShow(kLightKit_Off);
             if (!isRotaryAtRest())
@@ -1140,7 +1187,6 @@ public:
                 println(rotaryMotorCurrentPosition());
                 return false;
             }
-        #endif
             // Reset sLifterDistance length
             sLifterDistance = 0;
             resetLifterPosition();
@@ -1153,7 +1199,6 @@ public:
             DEBUG_PRINTLN(F("ABORT: FAILED SEEK TO TOP"));
             return false;
         }
-        return true;
     }
 
     static bool ensureSafetyManeuver()
@@ -2441,6 +2486,10 @@ static void handleI2CEvent()
         if (!lifter.readCommandFromEEPROM(seq, sCmdBuffer))
         {
             sCmdBuffer[0] = '\0';
+        }
+        else
+        {
+            runSerialCommand();
         }
     }
     else
