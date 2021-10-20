@@ -1291,7 +1291,9 @@
 <variantdefs>
 </variantdefs>
 <classes>
-<class number="0" name="default" width="0" drill="0">
+<class number="0" name="default" width="0.2032" drill="0">
+</class>
+<class number="1" name="power" width="0.508" drill="0">
 </class>
 </classes>
 <parts>
@@ -1499,7 +1501,7 @@
 <wire x1="116.84" y1="66.04" x2="116.84" y2="78.74" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="+5V" class="0">
+<net name="+5V" class="1">
 <segment>
 <pinref part="LIFTER" gate="A" pin="3"/>
 <pinref part="SUPPLY1" gate="G$1" pin="+5V"/>
@@ -1699,7 +1701,7 @@
 <label x="63.5" y="7.62" size="1.778" layer="95" rot="R90"/>
 </segment>
 </net>
-<net name="+12V" class="0">
+<net name="+12V" class="1">
 <segment>
 <wire x1="60.96" y1="0" x2="35.56" y2="0" width="0.1524" layer="91"/>
 <pinref part="SUPPLY11" gate="G$1" pin="+12V"/>

@@ -438,56 +438,48 @@
 <packageinstances>
 <packageinstance name="2X05"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="2X05/90" urn="urn:adsk.eagle:package:22471/2" type="model">
 <description>PIN HEADER</description>
 <packageinstances>
 <packageinstance name="2X05/90"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="1X06" urn="urn:adsk.eagle:package:22472/2" type="model">
 <description>PIN HEADER</description>
 <packageinstances>
 <packageinstance name="1X06"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="1X06/90" urn="urn:adsk.eagle:package:22475/2" type="model">
 <description>PIN HEADER</description>
 <packageinstances>
 <packageinstance name="1X06/90"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="2X02" urn="urn:adsk.eagle:package:22455/2" type="model">
 <description>PIN HEADER</description>
 <packageinstances>
 <packageinstance name="2X02"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="2X02/90" urn="urn:adsk.eagle:package:22456/2" type="model">
 <description>PIN HEADER</description>
 <packageinstances>
 <packageinstance name="2X02/90"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="2X03" urn="urn:adsk.eagle:package:22462/2" type="model">
 <description>PIN HEADER</description>
 <packageinstances>
 <packageinstance name="2X03"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="2X03/90" urn="urn:adsk.eagle:package:22464/2" type="model">
 <description>PIN HEADER</description>
 <packageinstances>
 <packageinstance name="2X03/90"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 </packages3d>
 <symbols>
@@ -988,13 +980,11 @@
 <packageinstances>
 <packageinstance name="POLOLU3161"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="1213" urn="" wip_urn="urn:adsk.wipprod:fs.file:vf.nLRjOX2ASjCD4XUKYZUHxQ?version=10" footprint_name="1213" locally_modified="yes" type="model">
 <packageinstances>
 <packageinstance name="1213"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 </packages3d>
 <symbols>
@@ -1274,7 +1264,6 @@
 <packageinstances>
 <packageinstance name="VREG_2851"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 </packages3d>
 <symbols>
@@ -1330,7 +1319,9 @@
 <variantdefs>
 </variantdefs>
 <classes>
-<class number="0" name="default" width="0" drill="0">
+<class number="0" name="default" width="0.2032" drill="0">
+</class>
+<class number="1" name="power" width="0.508" drill="0">
 </class>
 </classes>
 <parts>
@@ -1538,7 +1529,7 @@
 <wire x1="116.84" y1="66.04" x2="116.84" y2="78.74" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="+5V" class="0">
+<net name="+5V" class="1">
 <segment>
 <pinref part="LIFTER" gate="A" pin="3"/>
 <pinref part="SUPPLY1" gate="G$1" pin="+5V"/>
@@ -1738,7 +1729,7 @@
 <label x="63.5" y="7.62" size="1.778" layer="95" rot="R90"/>
 </segment>
 </net>
-<net name="+12V" class="0">
+<net name="+12V" class="1">
 <segment>
 <wire x1="60.96" y1="0" x2="35.56" y2="0" width="0.1524" layer="91"/>
 <pinref part="SUPPLY11" gate="G$1" pin="+12V"/>

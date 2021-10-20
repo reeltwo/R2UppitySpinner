@@ -353,42 +353,36 @@
 <packageinstances>
 <packageinstance name="1X06"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="1X06/90" urn="urn:adsk.eagle:package:22475/2" type="model">
 <description>PIN HEADER</description>
 <packageinstances>
 <packageinstance name="1X06/90"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="1X02" urn="urn:adsk.eagle:package:22435/2" type="model">
 <description>PIN HEADER</description>
 <packageinstances>
 <packageinstance name="1X02"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="1X02/90" urn="urn:adsk.eagle:package:22437/2" type="model">
 <description>PIN HEADER</description>
 <packageinstances>
 <packageinstance name="1X02/90"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="2X05" urn="urn:adsk.eagle:package:22470/2" type="model">
 <description>PIN HEADER</description>
 <packageinstances>
 <packageinstance name="2X05"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 <package3d name="2X05/90" urn="urn:adsk.eagle:package:22471/2" type="model">
 <description>PIN HEADER</description>
 <packageinstances>
 <packageinstance name="2X05/90"/>
 </packageinstances>
-<metadata pins="" leadSpan="" leadSpan2="" pitch="" pitch2="" bodyLength="" bodyWidth="" height="" ipcFamily="" ipcName="" jedecFamily="" jedecVariant="" mountingType=""/>
 </package3d>
 </packages3d>
 <symbols>
@@ -735,6 +729,10 @@ DIN A5, landscape with doc field</description>
 <classes>
 <class number="0" name="default" width="0" drill="0">
 </class>
+<class number="1" name="Motor Power" width="0.6096" drill="0">
+</class>
+<class number="2" name="5VPower" width="0.4064" drill="0">
+</class>
 </classes>
 <parts>
 <part name="LIGHTKIT" library="Connector" deviceset="PINHD-1X6" device="" package3d_urn="urn:adsk.eagle:package:22472/2"/>
@@ -743,12 +741,12 @@ DIN A5, landscape with doc field</description>
 <part name="INPUT" library="Connector" deviceset="PINHD-2X5" device="/90" package3d_urn="urn:adsk.eagle:package:22471/2"/>
 <part name="SUPPLY2" library="Power_Symbols" deviceset="+5V" device="" value="+5V"/>
 <part name="SUPPLY4" library="Power_Symbols" deviceset="GND" device="" value="GND"/>
-<part name="SUPPLY3" library="Power_Symbols" deviceset="+5V" device="" value="+5V"/>
-<part name="SUPPLY7" library="Power_Symbols" deviceset="GND" device="" value="GND"/>
 <part name="SUPPLY6" library="Power_Symbols" deviceset="GND" device="" value="GND"/>
 <part name="SUPPLY1" library="Power_Symbols" deviceset="+5V" device="" value="+5V"/>
 <part name="SUPPLY5" library="Power_Symbols" deviceset="GND" device="" value="GND"/>
 <part name="FRAME1" library="frames" library_urn="urn:adsk.eagle:library:229" deviceset="DINA5_L" device=""/>
+<part name="SUPPLY3" library="Power_Symbols" deviceset="+5V" device="" value="+5V"/>
+<part name="SUPPLY7" library="Power_Symbols" deviceset="GND" device="" value="GND"/>
 </parts>
 <sheets>
 <sheet>
@@ -777,12 +775,6 @@ DIN A5, landscape with doc field</description>
 <instance part="SUPPLY4" gate="G$1" x="76.2" y="30.48" smashed="yes">
 <attribute name="VALUE" x="76.2" y="27.94" size="1.778" layer="96" align="center"/>
 </instance>
-<instance part="SUPPLY3" gate="G$1" x="91.44" y="88.9" smashed="yes">
-<attribute name="VALUE" x="91.313" y="91.948" size="1.778" layer="96" align="bottom-center"/>
-</instance>
-<instance part="SUPPLY7" gate="G$1" x="30.48" y="91.44" smashed="yes">
-<attribute name="VALUE" x="30.48" y="88.9" size="1.778" layer="96" align="center"/>
-</instance>
 <instance part="SUPPLY6" gate="G$1" x="119.38" y="45.72" smashed="yes">
 <attribute name="VALUE" x="119.38" y="43.18" size="1.778" layer="96" align="center"/>
 </instance>
@@ -797,24 +789,22 @@ DIN A5, landscape with doc field</description>
 <attribute name="LAST_DATE_TIME" x="113.03" y="2.54" size="2.286" layer="94"/>
 <attribute name="SHEET" x="126.365" y="-2.54" size="2.54" layer="94"/>
 </instance>
+<instance part="SUPPLY3" gate="G$1" x="33.02" y="86.36" smashed="yes">
+<attribute name="VALUE" x="32.893" y="89.408" size="1.778" layer="96" align="bottom-center"/>
+</instance>
+<instance part="SUPPLY7" gate="G$1" x="93.98" y="78.74" smashed="yes">
+<attribute name="VALUE" x="93.98" y="76.2" size="1.778" layer="96" align="center"/>
+</instance>
 </instances>
 <busses>
 </busses>
 <nets>
-<net name="GND" class="0">
+<net name="GND" class="2">
 <segment>
 <pinref part="MOTOR" gate="A" pin="4"/>
 <wire x1="66.04" y1="60.96" x2="66.04" y2="33.02" width="0.1524" layer="91"/>
 <wire x1="66.04" y1="33.02" x2="76.2" y2="33.02" width="0.1524" layer="91"/>
 <pinref part="SUPPLY4" gate="G$1" pin="GND"/>
-</segment>
-<segment>
-<wire x1="30.48" y1="88.9" x2="30.48" y2="93.98" width="0.1524" layer="91"/>
-<pinref part="SUPPLY7" gate="G$1" pin="GND"/>
-<pinref part="INPUT" gate="A" pin="7"/>
-<wire x1="58.42" y1="83.82" x2="30.48" y2="83.82" width="0.1524" layer="91"/>
-<wire x1="30.48" y1="83.82" x2="30.48" y2="93.98" width="0.1524" layer="91"/>
-<junction x="30.48" y="93.98"/>
 </segment>
 <segment>
 <pinref part="LIMIT" gate="G$1" pin="1"/>
@@ -832,8 +822,14 @@ DIN A5, landscape with doc field</description>
 <wire x1="25.4" y1="60.96" x2="15.24" y2="60.96" width="0.1524" layer="91"/>
 <junction x="15.24" y="60.96"/>
 </segment>
+<segment>
+<pinref part="INPUT" gate="A" pin="8"/>
+<wire x1="66.04" y1="83.82" x2="93.98" y2="83.82" width="0.1524" layer="91"/>
+<wire x1="93.98" y1="83.82" x2="93.98" y2="81.28" width="0.1524" layer="91"/>
+<pinref part="SUPPLY7" gate="G$1" pin="GND"/>
+</segment>
 </net>
-<net name="+5V" class="0">
+<net name="+5V" class="2">
 <segment>
 <pinref part="MOTOR" gate="A" pin="3"/>
 <wire x1="63.5" y1="60.96" x2="63.5" y2="33.02" width="0.1524" layer="91"/>
@@ -848,29 +844,17 @@ DIN A5, landscape with doc field</description>
 <wire x1="10.16" y1="53.34" x2="5.08" y2="53.34" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<pinref part="INPUT" gate="A" pin="8"/>
-<wire x1="66.04" y1="83.82" x2="91.44" y2="83.82" width="0.1524" layer="91"/>
+<pinref part="INPUT" gate="A" pin="7"/>
+<wire x1="58.42" y1="83.82" x2="33.02" y2="83.82" width="0.1524" layer="91"/>
+<wire x1="33.02" y1="83.82" x2="33.02" y2="86.36" width="0.1524" layer="91"/>
 <pinref part="SUPPLY3" gate="G$1" pin="+5V"/>
-<wire x1="91.44" y1="83.82" x2="91.44" y2="88.9" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="RMOT2" class="0">
+<net name="RMOT2" class="1">
 <segment>
 <pinref part="MOTOR" gate="A" pin="6"/>
 <wire x1="71.12" y1="60.96" x2="71.12" y2="43.18" width="0.1524" layer="91"/>
 <label x="71.12" y="43.18" size="1.778" layer="95" rot="R90"/>
-</segment>
-<segment>
-<pinref part="INPUT" gate="A" pin="10"/>
-<wire x1="66.04" y1="81.28" x2="83.82" y2="81.28" width="0.1524" layer="91"/>
-<label x="76.2" y="81.28" size="1.778" layer="95"/>
-</segment>
-</net>
-<net name="RMOT1" class="0">
-<segment>
-<pinref part="MOTOR" gate="A" pin="5"/>
-<wire x1="68.58" y1="60.96" x2="68.58" y2="43.18" width="0.1524" layer="91"/>
-<label x="68.58" y="43.18" size="1.778" layer="95" rot="R90"/>
 </segment>
 <segment>
 <pinref part="INPUT" gate="A" pin="9"/>
@@ -878,16 +862,28 @@ DIN A5, landscape with doc field</description>
 <label x="40.64" y="81.28" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="RTR_LIMIT" class="0">
+<net name="RMOT1" class="1">
 <segment>
-<pinref part="INPUT" gate="A" pin="6"/>
-<wire x1="66.04" y1="86.36" x2="83.82" y2="86.36" width="0.1524" layer="91"/>
-<label x="76.2" y="86.36" size="1.778" layer="95"/>
+<pinref part="MOTOR" gate="A" pin="5"/>
+<wire x1="68.58" y1="60.96" x2="68.58" y2="43.18" width="0.1524" layer="91"/>
+<label x="68.58" y="43.18" size="1.778" layer="95" rot="R90"/>
 </segment>
+<segment>
+<pinref part="INPUT" gate="A" pin="10"/>
+<wire x1="66.04" y1="81.28" x2="83.82" y2="81.28" width="0.1524" layer="91"/>
+<label x="76.2" y="81.28" size="1.778" layer="95"/>
+</segment>
+</net>
+<net name="RTR_LIMIT" class="0">
 <segment>
 <pinref part="LIMIT" gate="G$1" pin="2"/>
 <wire x1="91.44" y1="48.26" x2="111.76" y2="48.26" width="0.1524" layer="91"/>
 <label x="101.6" y="48.26" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="INPUT" gate="A" pin="5"/>
+<wire x1="58.42" y1="86.36" x2="40.64" y2="86.36" width="0.1524" layer="91"/>
+<label x="40.64" y="86.36" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="LKIT_B" class="0">
@@ -897,9 +893,9 @@ DIN A5, landscape with doc field</description>
 <label x="38.1" y="50.8" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="INPUT" gate="A" pin="3"/>
-<wire x1="58.42" y1="88.9" x2="40.64" y2="88.9" width="0.1524" layer="91"/>
-<label x="40.64" y="88.9" size="1.778" layer="95"/>
+<pinref part="INPUT" gate="A" pin="4"/>
+<wire x1="66.04" y1="88.9" x2="83.82" y2="88.9" width="0.1524" layer="91"/>
+<label x="76.2" y="88.9" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="LKIT_C" class="0">
@@ -909,21 +905,21 @@ DIN A5, landscape with doc field</description>
 <label x="38.1" y="48.26" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="INPUT" gate="A" pin="1"/>
-<wire x1="58.42" y1="91.44" x2="40.64" y2="91.44" width="0.1524" layer="91"/>
-<label x="40.64" y="91.44" size="1.778" layer="95"/>
+<pinref part="INPUT" gate="A" pin="2"/>
+<wire x1="66.04" y1="91.44" x2="83.82" y2="91.44" width="0.1524" layer="91"/>
+<label x="76.2" y="91.44" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="LKIT_A" class="0">
 <segment>
-<pinref part="INPUT" gate="A" pin="5"/>
-<wire x1="58.42" y1="86.36" x2="40.64" y2="86.36" width="0.1524" layer="91"/>
-<label x="40.64" y="86.36" size="1.778" layer="95"/>
-</segment>
-<segment>
 <pinref part="LIGHTKIT" gate="A" pin="4"/>
 <wire x1="25.4" y1="53.34" x2="45.72" y2="53.34" width="0.1524" layer="91"/>
 <label x="38.1" y="53.34" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="INPUT" gate="A" pin="6"/>
+<wire x1="66.04" y1="86.36" x2="83.82" y2="86.36" width="0.1524" layer="91"/>
+<label x="76.2" y="86.36" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="RTR_ENA" class="0">
@@ -933,9 +929,9 @@ DIN A5, landscape with doc field</description>
 <label x="60.96" y="43.18" size="1.778" layer="95" rot="R90"/>
 </segment>
 <segment>
-<pinref part="INPUT" gate="A" pin="4"/>
-<wire x1="66.04" y1="88.9" x2="83.82" y2="88.9" width="0.1524" layer="91"/>
-<label x="76.2" y="88.9" size="1.778" layer="95"/>
+<pinref part="INPUT" gate="A" pin="3"/>
+<wire x1="58.42" y1="88.9" x2="40.64" y2="88.9" width="0.1524" layer="91"/>
+<label x="40.64" y="88.9" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="RTR_ENB" class="0">
@@ -945,9 +941,9 @@ DIN A5, landscape with doc field</description>
 <label x="58.42" y="43.18" size="1.778" layer="95" rot="R90"/>
 </segment>
 <segment>
-<pinref part="INPUT" gate="A" pin="2"/>
-<wire x1="66.04" y1="91.44" x2="83.82" y2="91.44" width="0.1524" layer="91"/>
-<label x="76.2" y="91.44" size="1.778" layer="95"/>
+<pinref part="INPUT" gate="A" pin="1"/>
+<wire x1="58.42" y1="91.44" x2="40.64" y2="91.44" width="0.1524" layer="91"/>
+<label x="40.64" y="91.44" size="1.778" layer="95"/>
 </segment>
 </net>
 </nets>
