@@ -26,10 +26,18 @@
 // RISKIER CONFIGURATION OPTIONS
 ///////////////////////////////////
 
+// IA-Parts lifter defaults
 #define LIFTER_MINIMUM_POWER        45      // 40 out of 100. Don't bother with lower values. Won't lift reliably
 #define LIFTER_SEEKBOTTTOM_POWER    30      // 30 out of 100. Lower than LIFTER_MINIMUM_POWER because we are going down
 #define ROTARY_MINIMUM_POWER        20      // 20 out of 100. Don't bother with lower values. Won't rotate reliably
 #define LIFTER_DISTANCE             845     // default value - lifter will calibrate
+
+// Greg Hulette’s Periscope Lifter
+//#define LIFTER_MINIMUM_POWER        65      // 65 out of 100. Don't bother with lower values. Won't lift reliably
+//#define LIFTER_SEEKBOTTTOM_POWER    40      // 40 out of 100. Lower than LIFTER_MINIMUM_POWER because we are going down
+//#define ROTARY_MINIMUM_POWER        40      // 40 out of 100. Don't bother with lower values. Won't rotate reliably
+//#define LIFTER_DISTANCE             1200     // default value 1200 - lifter will calibrate
+
 #define ROTARY_MINIMUM_HEIGHT       LIFTER_DISTANCE/2
 #define MOTOR_TIMEOUT               2000
 #define OUTPUT_LIMIT_PRESCALE       3.1
@@ -1483,7 +1491,9 @@ public:
         }
 
         sDownLimitsCalibrated = true;
+    #ifndef USE_DEBUG
         writeSettingsToEEPROM();
+    #endif
         println(F("SUCCESS"));
         sCalibrating = false;
         return true;
@@ -1940,7 +1950,9 @@ public:
             sLifterDistance = height;
             sUpLimitsCalibrated = upcal;
             sDownLimitsCalibrated = downcal;
+        #ifdef I2C_ADDRESS
             sI2CAddress = i2caddr;
+        #endif
             fRotaryLimitSetting = rotaryLimitSetting;
             fLifterLimitSetting = lifterLimitSetting;
             if (sBaudRate != baudrate)
@@ -1957,6 +1969,7 @@ public:
 
     static void writeSettingsToEEPROM()
     {
+    #ifndef USE_DEBUG
         size_t offs = 0;
         uint32_t magic = EEPROM_MAGIC; 
         EEPROM.put(offs, magic); offs += sizeof(magic);
@@ -2001,10 +2014,12 @@ public:
             uint8_t tag = EEPROM_END_TAG;
             EEPROM.put(offs, tag); offs += sizeof(tag);
         }
+    #endif
     }
 
     static void clearCommandsFromEEPROM()
     {
+    #ifndef USE_DEBUG
         uint16_t offs = 0;
         uint32_t magic;
         EEPROM.get(offs, magic); offs += sizeof(magic);
@@ -2021,10 +2036,12 @@ public:
                 println(F("Cleared"));
             }
         }
+    #endif
     }
 
     static void listCommandsFromEEPROM()
     {
+    #ifndef USE_DEBUG
         uint16_t offs = 0;
         uint32_t magic;
         EEPROM.get(offs, magic); offs += sizeof(magic);
@@ -2062,10 +2079,12 @@ public:
             }
         }
         println(F("Complete"));
+    #endif
     }
 
     static void listSortedCommandsFromEEPROM()
     {
+    #ifndef USE_DEBUG
         typedef uint32_t BMAPWORD;
     #define BMAPWORD_GRANULARITY    (sizeof(BMAPWORD))
     #define BMAPWORD_BIT_SIZE       (sizeof(BMAPWORD) * 8)
@@ -2151,6 +2170,7 @@ public:
     #undef BIT_MAPWORD
     #undef BMAPWORD_BIT_SIZE
     #undef BMAPWORD_GRANULARITY
+    #endif
     }
 
     static bool readCommandFromEEPROM(uint8_t num, char* cmd, uint16_t* cmdoffs = nullptr)
@@ -2206,6 +2226,7 @@ public:
 
     static bool deleteCommandFromEEPROM(uint8_t num)
     {
+    #ifndef USE_DEBUG
         uint16_t writeoffs;
         if (!readCommandFromEEPROM(num, nullptr, &writeoffs))
             return false;
@@ -2236,11 +2257,13 @@ public:
                 readlen--;
             }
         }
+    #endif
         return true;
     }
 
     static bool writeCommandToEEPROM(uint8_t num, const char* cmd)
     {
+    #ifndef USE_DEBUG
         // delete old command if it exists
         deleteCommandFromEEPROM(num);
 
@@ -2309,6 +2332,7 @@ public:
         {
             println("Must calibrate first");
         }
+    #endif
         return false;
     }
 
@@ -3261,7 +3285,9 @@ bool processCommand(const char* cmd, bool firstCommand)
 
 void loop()
 {
+#ifdef I2C_ADDRESS
     handleI2CEvent();
+#endif
     lifter.animate();
 
     // append commands to command buffer
