@@ -8,6 +8,12 @@ After installing your board you should run the `#PSC` calibration command.
 
 If you want a snappy hyper caffinated periscope you should use a 6V lifter motor. If you want a slower more deliberate periscope you should use a 12V lifter motor.
 
+# Assembling R2 Uppity Spinner PCB Part 1
+[![Part1](https://img.youtube.com/vi/x4_3irdV4C8/hqdefault.jpg)](https://www.youtube.com/watch?v=x4_3irdV4C8)
+
+# Assembling R2 Uppity Spinner PCB Part 2
+[![Part2](https://img.youtube.com/vi/MdSRJsYx1T8/hqdefault.jpg)](https://www.youtube.com/watch?v=MdSRJsYx1T8)
+
 ## Configure commands
 
 `#PSC`:
