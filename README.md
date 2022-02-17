@@ -51,6 +51,7 @@ Store specified sequence (seq) as number in EEPROM.
 	#PS5:P100:L7:M,50,40,5,5      (random slow)
 	#PS6:A0                       (face forward)
 	#PS7:P100:L5:R-30             (search light clockwise)
+	#PS8:H:P50:W2:P85,35:A90,25:W2:A270,20,100:W2:P100,100:L5:R50:W4:H    (sneaky periscope)
 	#PS0:H:L0:P100,5:W2:P50:W2:P85,35:A90,25:W2:A270,20,100:W2:P100,100:L5:R50:W4:H
 
 `#PBAUD`[baudrate]
