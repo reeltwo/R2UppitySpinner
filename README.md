@@ -2,6 +2,8 @@
 
 This is the sketch for the R2 Uppity Spinner. It depends on the Reeltwo library. You can download the latest release of the Reeltwo library here: https://github.com/reeltwo/Reeltwo/releases
 
+[![Uppity Spinner](https://i.vimeocdn.com/video/1153816619-6fef8819cf32b562e0519537a46baed562bb51651010442a9ccdd9909c40952e-d_640x360)](https://vimeo.com/558277516)
+
 Default baud rate is 9600 baud and the default I2C address is 32 (0x20). Both can be changed using the configuration commands below.
 
 After installing your board you should run the `#PSC` calibration command.
