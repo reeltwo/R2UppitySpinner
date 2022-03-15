@@ -66,6 +66,36 @@ Change system I2C address. Settings will be stored in EEPROM and take affect onc
 
 	#PI2C128                 (set I2C address to 128)
 
+`#PR`
+Enable/disable rotary unit. This will reboot the board. The setting will persist between reboots.
+*Examples*:
+
+	#PR (toggle rotary unit on/off)
+
+`#PNCL`
+Set lifter limit switch to normally closed. Default setting.
+*Examples*:
+
+	#PNCL (lifter limit normally closed)
+
+`#PNOL`
+Set lifter limit switch to normally open.
+*Examples*:
+
+	#PNOL (lifter limit normally open)
+
+`#PNCR`
+Set rotary limit switch to normally closed. Default setting.
+*Examples*:
+
+	#PNCL (rotary limit normally closed)
+
+`#PNOL`
+Set rotary limit switch to normally open.
+*Examples*:
+
+	#PNOL (rotary limit normally open)
+
 Lifter commands
 ===============
 
