@@ -92,11 +92,11 @@ Set rotary limit switch to normally closed. Default setting.
 
 	#PNCL (rotary limit normally closed)
 
-`#PNOL`
+`#PNOR`
 Set rotary limit switch to normally open.
 *Examples*:
 
-	#PNOL (rotary limit normally open)
+	#PNOR (rotary limit normally open)
 
 Lifter commands
 ===============
