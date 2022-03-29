@@ -1843,7 +1843,7 @@ public:
                 lifterMotorMove(mpower);
                 delay(3);
                 lifterMotorStop();
-                delay(1);
+                delay(2);
                 if (!lifterStatus.isMoving())
                 {
                     DEBUG_PRINTLN(F("ABORT"));
@@ -2632,7 +2632,7 @@ bool processLifterCommand(const char* cmd)
                 uint32_t speedpercentage = strtolu(cmd+1, &cmd);
                 if (*cmd == '\0')
                 {
-                    speedpercentage = min(max(speedpercentage, sMinimumPower), 100);
+                    speedpercentage = min(max(speedpercentage, 0), 100);
                     speed = speedpercentage / 100.0;
                 }
             }
