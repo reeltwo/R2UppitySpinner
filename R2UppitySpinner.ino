@@ -721,27 +721,7 @@ public:
 
     static void rotaryMotorRelativePosition(int relativeDegrees)
     {
-    #ifndef DISABLE_ROTARY
-        if (sDisableRotary)
-            return;
-        long rotaryStartPos = getRotaryPosition();
-        relativeDegrees = normalize(relativeDegrees);
-        rotaryMotorMove((relativeDegrees > 0) ? (ROTARY_MINIMUM_POWER/100.0) : -(ROTARY_MINIMUM_POWER/100.0));
-        RotaryStatus rotaryStatus;
-        for (;;)
-        {
-            long encoder_ticks = getRotaryPosition();
-            int diff = abs(rotaryStartPos - encoder_ticks);
-            if (diff >= abs(relativeDegrees) * (sRotaryCircleEncoderCount / 360.0))
-                break;
-            if (!rotaryStatus.isMoving())
-            {
-                DEBUG_PRINTLN(F("ABORT"));
-                break;
-            }
-        }
-        rotaryMotorStop();
-    #endif
+        rotaryMotorAbsolutePosition(rotaryMotorCurrentPosition() + relativeDegrees);
     }
 
     static void rotateHome()
@@ -2739,7 +2719,9 @@ bool processLifterCommand(const char* cmd)
             break;
         }
         case 'A':
+        case 'D':
         {
+            bool relative = (cmd[-1] == 'D');
             // stop move mode
             lifter.moveModeEnd();
 
@@ -2795,43 +2777,17 @@ bool processLifterCommand(const char* cmd)
             if (*cmd == '\0' && lifter.rotaryAllowed())
             {
                 Serial.print(F("ROTARY DEGREE: ")); Serial.println(degrees);
-                if (degrees == 0)
+                if (relative)
+                {
+                    lifter.rotaryMotorRelativePosition(degrees);
+                }
+                else if (degrees == 0)
                 {
                     lifter.rotateHome();
                 }
                 else
                 {
                     lifter.rotaryMotorAbsolutePosition(degrees, speed, maxspeed);
-                }
-            }
-            break;
-        }
-        case 'D':
-        {
-            // stop move mode
-            lifter.moveModeEnd();
-
-            // position relative degree
-            int32_t degrees;
-            if (*cmd == 'R' && (cmd[1] == ',' || cmd[1] == '\0'))
-            {
-                degrees = random(360);
-                cmd++;
-            }
-            else
-            {
-                degrees = strtol(cmd, &cmd);
-            }
-            if (*cmd == '\0' && lifter.rotaryAllowed())
-            {
-                Serial.print(F("ROTARY DEGREE: ")); Serial.println(degrees);
-                if (degrees == 0)
-                {
-                    lifter.rotateHome();
-                }
-                else
-                {
-                    lifter.rotaryMotorRelativePosition(degrees);
                 }
             }
             break;
@@ -3051,7 +3007,9 @@ void processConfigureCommand(const char* cmd)
                         break;
                     }
                     case 'A':
+                    case 'D':
                     {
+                        bool relative = (cmd[0] == 'D');
                         bool randdegrees = false;
                         bool randspeed = false;
                         bool randmax = false;
@@ -3097,7 +3055,9 @@ void processConfigureCommand(const char* cmd)
                                 maxspeed = max(min(max(maxspeed, 0), 100), speed);
                             }
                         }
-                        Serial.print("Rotate Absolute Degrees: ");
+                        Serial.print("Rotate ");
+                        Serial.print((relative) ? "Relative" : "Absolute");
+                        Serial.print(" Degrees: ");
                         if (randdegrees)
                             Serial.print(F("Random"));
                         else
@@ -3119,28 +3079,6 @@ void processConfigureCommand(const char* cmd)
                                 Serial.print(maxspeed);
                         }
                         Serial.println();
-                        break;
-                    }
-                    case 'D':
-                    {
-                        // degrees
-                        bool randdegrees = false;
-                        int32_t degrees = 0;
-                        cmd++;
-                        if (*cmd == 'R')
-                        {
-                            randdegrees = true;
-                            cmd++;
-                        }
-                        else
-                        {
-                            degrees = strtolu(cmd, &cmd);
-                        }
-                        Serial.print("Rotate Relative Degrees: ");
-                        if (randdegrees)
-                            Serial.println("Random");
-                        else
-                            Serial.println(degrees);
                         break;
                     }
                     case 'M':
