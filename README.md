@@ -125,8 +125,8 @@ Wait for specified number of seconds. If 'R' is specified it will randomize the 
 *Examples*:
 
 	:PW2    (wait 2 seconds before executing next sequence)
-	:PR     (wait random 1-6 seconds)
-	:PR10   (wait random 1-10 seconds)
+	:PWR    (wait random 1-6 seconds)
+	:PWR10  (wait random 1-10 seconds)
 
 ### Light kit sequence
 `L`number:
